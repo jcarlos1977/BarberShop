@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Estética / Barbería - Gestión</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>Panel de Gestión - Estética / Barbería</h1>
+    <div class="header-summary">
+      <span id="summary-today-appointments">Citas hoy: 0</span>
+      <span id="summary-today-income">Ingresos estimados: $0.00</span>
+      <span id="summary-clients-count">Clientes registrados: 0</span>
+    </div>
+  </header>
+
+  <nav class="app-nav">
+    <button data-tab="dashboard" class="nav-btn active">Dashboard</button>
+    <button data-tab="clients" class="nav-btn">Clientes</button>
+    <button data-tab="appointments" class="nav-btn">Citas</button>
+    <button data-tab="services" class="nav-btn">Servicios</button>
+    <button data-tab="inventory" class="nav-btn">Inventario</button>
+    <button data-tab="cuts" class="nav-btn">Cortes</button>
+    <button data-tab="reports" class="nav-btn">Reportes</button>
+    <button data-tab="settings" class="nav-btn">Configuración</button>
+  </nav>
+
+  <main class="app-main">
+
+    <!-- DASHBOARD -->
+    <section id="tab-dashboard" class="tab-section active">
+      <h2>Resumen del día</h2>
+
+      <div class="dashboard-actions">
+        <button id="dashboard-new-appointment-btn" class="primary-btn">
+          + Nueva cita
+        </button>
+
+        <!-- ✔ BOTÓN DE CORTE RÁPIDO SOLO AQUÍ -->
+        <button id="walkin-btn" class="primary-btn">
+          + Corte rápido
+        </button>
+
+        <div class="business-income">
+          <h3>Ingreso del día</h3>
+          <div id="dashboard-income-today"></div>
+        </div>
+
+      </div>
+
+      
+
+      <div class="dashboard-extra">
+        <div class="card">
+          <h3>Alertas rápidas</h3>
+          <ul id="dashboard-quick-alerts"></ul>
+        </div>
+
+        <div class="card">
+          <h3>Clientes nuevos hoy</h3>
+          <ul id="dashboard-new-clients-list"></ul>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="card">
+          <h3>Citas de hoy</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Cliente</th>
+                <th>Servicio</th>
+                <th>Barbero</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="dashboard-today-appointments-body"></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <h3>Alertas</h3>
+          <ul id="dashboard-alerts-list"></ul>
+        </div>
+
+        <div class="card">
+          <h3>Servicios más vendidos (últimos 30 días)</h3>
+          <ul id="dashboard-top-services-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLIENTES -->
+    <section id="tab-clients" class="tab-section">
+      <h2>Gestión de clientes</h2>
+      <div class="two-columns">
+        <form id="client-form" class="card">
+          <h3>Nuevo / Editar cliente</h3>
+          <input type="hidden" id="client-id" />
+
+          <label>Nombre completo</label>
+          <input type="text" id="client-name" required />
+
+          <label>Teléfono</label>
+          <input type="tel" id="client-phone" required />
+
+          <label>Notas / preferencias</label>
+          <textarea id="client-notes"></textarea>
+
+          <label>Cliente VIP</label>
+          <input type="checkbox" id="client-vip" />
+
+          <div class="form-actions">
+            <button type="submit">Guardar cliente</button>
+            <button type="button" id="client-form-reset">Nuevo</button>
+          </div>
+        </form>
+
+        <div class="card">
+          <h3>Listado de clientes</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Teléfono</th>
+                <th>VIP</th>
+                
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="clients-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- CITAS -->
+    <section id="tab-appointments" class="tab-section">
+      <h2>Agenda y citas</h2>
+      <div class="two-columns">
+        <form id="appointment-form" class="card">
+          <h3>Nueva cita</h3>
+          <input type="hidden" id="appointment-id" />
+
+          <label>Fecha</label>
+          <input type="date" id="appointment-date" required />
+
+          <label>Hora</label>
+          <input type="time" id="appointment-time" required />
+
+          <label>Cliente</label>
+          <select id="appointment-client" required></select>
+
+          <label>Servicio</label>
+          <select id="appointment-service" required></select>
+
+          <label>Barbero / Estilista</label>
+          <input type="text" id="appointment-barber" required />
+
+          <label>Estado</label>
+          <select id="appointment-status">
+            <option value="programada">Programada</option>
+            <option value="completada">Completada</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+
+          <div class="form-actions">
+            <button type="submit">Guardar cita</button>
+            <button type="button" id="appointment-form-reset">Nueva</button>
+          </div>
+        </form>
+
+        <div class="card">
+          <h3>Citas por fecha</h3>
+          <label>Fecha</label>
+          <input type="date" id="appointments-filter-date" />
+          <button id="appointments-filter-btn">Filtrar</button>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Cliente</th>
+                <th>Servicio</th>
+                <th>Barbero</th>
+                <th>Estado</th>
+                <th>Total</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="appointments-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- CORTES -->
+    <section id="tab-cuts" class="tab-section">
+      <h2>Registro de cortes</h2>
+
+      <!-- ❌ BOTÓN ELIMINADO DE AQUÍ -->
+
+      <div class="card">
+        <h3>Cortes del día</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Hora</th>
+              <th>Cliente</th>
+              <th>Servicio</th>
+              <th>Barbero</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody id="cuts-today-table"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+
+        <button id="clear-cuts-history-btn" class="primary-btn">Borrar historial completo</button>
+        
+
+
+        <h3>Historial de cortes</h3>
+        <label>Fecha</label>
+        <input type="date" id="cuts-filter-date" />
+        <button id="cuts-filter-btn">Filtrar</button>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Hora</th>
+              <th>Cliente</th>
+              <th>Servicio</th>
+              <th>Barbero</th>
+              <th>Total</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="cuts-history-table"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- MODAL CORTE RÁPIDO -->
+    <div id="walkin-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3>Registrar corte rápido</h3>
+
+        <label>Cliente (opcional)</label>
+        <select id="walkin-client">
+          <option value="">Walk-in (sin registro)</option>
+        </select>
+
+        <label>Servicio</label>
+        <select id="walkin-service"></select>
+
+        <label>Barbero</label>
+        <input type="text" id="walkin-barber">
+
+        <label>Notas</label>
+        <input type="text" id="walkin-notes">
+
+        <button id="walkin-save-btn">Guardar corte</button>
+        <button id="walkin-close-btn">Cerrar</button>
+      </div>
+    </div>
+
+    <!-- SERVICIOS -->
+    <section id="tab-services" class="tab-section">
+      <h2>Servicios y precios</h2>
+      <div class="two-columns">
+        <form id="service-form" class="card">
+          <h3>Nuevo / Editar servicio</h3>
+          <input type="hidden" id="service-id" />
+
+          <label>Nombre del servicio</label>
+          <input type="text" id="service-name" required />
+
+          <label>Duración (minutos)</label>
+          <input type="number" id="service-duration" min="5" step="5" required />
+
+          <label>Precio base</label>
+          <input type="number" id="service-price" min="0" step="0.01" required />
+
+          <label>Activo</label>
+          <input type="checkbox" id="service-active" checked />
+
+          <div class="form-actions">
+            <button type="submit">Guardar servicio</button>
+            <button type="button" id="service-form-reset">Nuevo</button>
+          </div>
+        </form>
+
+        <div class="card">
+          <h3>Listado de servicios</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Duración</th>
+                <th>Precio</th>
+                <th>Activo</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="services-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- INVENTARIO -->
+    <section id="tab-inventory" class="tab-section">
+      <h2>Inventario</h2>
+      <div class="two-columns">
+        <form id="inventory-form" class="card">
+          <h3>Nuevo / Editar producto</h3>
+          <input type="hidden" id="inventory-id" />
+
+          <label>Nombre del producto</label>
+          <input type="text" id="inventory-name" required />
+
+          <label>Cantidad en stock</label>
+          <input type="number" id="inventory-qty" min="0" required />
+
+          <label>Stock mínimo</label>
+          <input type="number" id="inventory-min" min="0" required />
+
+          <label>Costo unitario</label>
+          <input type="number" id="inventory-cost" min="0" step="0.01" required />
+
+          <div class="form-actions">
+            <button type="submit">Guardar producto</button>
+            <button type="button" id="inventory-form-reset">Nuevo</button>
+          </div>
+        </form>
+
+        <div class="card">
+          <h3>Listado de inventario</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Mínimo</th>
+                <th>Costo</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="inventory-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- REPORTES -->
+    <section id="tab-reports" class="tab-section">
+      <h2>Reportes y estadísticas</h2>
+      <div class="reports-grid">
+        <div class="card">
+          <h3>Ingresos por rango de fechas</h3>
+          <label>Desde</label>
+          <input type="date" id="report-from-date" />
+          <label>Hasta</label>
+          <input type="date" id="report-to-date" />
+          <button id="report-generate-btn">Generar</button>
+          <div id="report-income-summary"></div>
+        </div>
+
+        <div class="card">
+          <h3>Servicios más vendidos</h3>
+          <ul id="report-top-services-list"></ul>
+        </div>
+
+        <div class="card">
+          <h3>Clientes frecuentes</h3>
+          <ul id="report-top-clients-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONFIGURACIÓN -->
+    <section id="tab-settings" class="tab-section">
+      <h2>Configuración del sistema</h2>
+      <div class="card">
+        <h3>Horarios de trabajo</h3>
+        <label>Hora inicio</label>
+        <input type="time" id="settings-start-time" />
+        <label>Hora fin</label>
+        <input type="time" id="settings-end-time" />
+        <button id="settings-save-btn">Guardar configuración</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <span>Estética / Barbería - Sistema de gestión local (localStorage)</span>
+  </footer>
+
+  <script src="storage.js"></script>
+  <script src="models.js"></script>
+  <script src="logic.js"></script>
+  <script src="ui.js"></script>
+  <script src="main.js"></script>
+
+</body>
+</html>

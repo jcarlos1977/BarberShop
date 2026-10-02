@@ -1,0 +1,560 @@
+* {
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #f4f4f7;
+  color: #222;
+}
+
+.app-header {
+  background: #111827;
+  color: #f9fafb;
+  padding: 16px 24px;
+}
+
+.app-header h1 {
+  margin: 0 0 8px 0;
+}
+
+.header-summary {
+  display: flex;
+  gap: 16px;
+  font-size: 0.9rem;
+}
+
+.app-nav {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #1f2937;
+}
+
+.nav-btn {
+  border: none;
+  padding: 8px 12px;
+  background: #374151;
+  color: #e5e7eb;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.nav-btn.active {
+  background: #10b981;
+  color: #111827;
+}
+
+.app-main {
+  padding: 16px;
+}
+
+.tab-section {
+  display: none;
+}
+
+.tab-section.active {
+  display: block;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 12px 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  margin-bottom: 16px;
+}
+
+.two-columns {
+  display: grid;
+  grid-template-columns: 0.8fr 1.4fr;
+  gap: 16px;
+}
+
+.dashboard-grid,
+.reports-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 2fr 2fr;
+  gap: 16px;
+}
+
+label {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+input[type="text"],
+input[type="tel"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+select,
+textarea {
+  width: 100%;
+  padding: 6px 8px;
+  margin-top: 4px;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  font-size: 0.9rem;
+}
+
+textarea {
+  min-height: 60px;
+}
+
+.form-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.form-actions button {
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.form-actions button[type="submit"] {
+  background: #10b981;
+  color: #111827;
+}
+
+.form-actions button[type="button"] {
+  background: #6b7280;
+  color: #f9fafb;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+th, td {
+  border: 1px solid #e5e7eb;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+th {
+  background: #f3f4f6;
+}
+
+button.small {
+  padding: 4px 6px;
+  font-size: 0.75rem;
+}
+
+.status-ok {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.status-low {
+  color: #ef4444;
+  font-weight: 600;
+}
+
+.app-footer {
+  padding: 8px 16px;
+  background: #111827;
+  color: #9ca3af;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+
+
+
+.dashboard-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-right: 0px
+}
+
+
+
+.dashboard-actions button.primary-btn + button.primary-btn {
+  margin-left: -1100px;  /* ← separación normal entre botones */
+}
+
+
+
+.primary-btn {
+  background: #10b981;
+  color: #111827;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.business-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboard-shortcuts {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.shortcut-btn {
+  background: #3b82f6;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.dashboard-extra {
+  display: grid;
+  grid-template-columns: 0.98fr 1fr;
+  gap: 16px;
+}
+
+
+/* MODAL CORTE RÁPIDO  actiavar las barras verticales e horizontales*/
+.modal {
+  position: fixed;
+  inset: 0; /* top:0, right:0, bottom:0, left:0 */
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Oculto por defecto */
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background: #ffffff;
+  padding: 16px 20px;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+  min-width: 320px;
+  max-width: 420px;
+}
+
+
+table {
+  display: block;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 300px;
+  white-space: nowrap;
+}
+
+
+/* Limitar altura de las tarjetas del dashboard */
+.dashboard-grid .card {
+  max-height: 600px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* El UL dentro del grid también debe hacer scroll */
+.dashboard-grid .card ul {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding-right: 6px;
+}
+
+/* El contenedor de la tabla debe ocupar el espacio restante */
+.dashboard-grid .card table {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+  display: block;
+  white-space: nowrap;
+}
+
+
+/* Limitar altura de las tarjetas pequeñas del dashboard */
+.dashboard-extra .card {
+  max-height: 400px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* El UL debe hacer scroll */
+.dashboard-extra .card ul {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding-right: 6px;
+}
+
+
+/* MODAL CORTE RÁPIDO  actiavar las barras verticales e horizontales*/
+
+.business-income {
+  background: #ffffff;
+  padding: 12px 16px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  margin-bottom: 16px;
+}
+
+.business-income h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+
+/* Tabla de Citas de Hoy */
+#dashboard-today-appointments-body td,
+#dashboard-today-appointments-body th {
+  padding: 8px 14px;      /* Más espacio interno */
+  font-size: 15px;        /* Texto más legible */
+}
+
+/* Ajustes de ancho por columna */
+#dashboard-today-appointments-body td:nth-child(1),
+#dashboard-today-appointments-body th:nth-child(1) {
+  width: 90px;            /* Hora */
+}
+
+#dashboard-today-appointments-body td:nth-child(2),
+#dashboard-today-appointments-body th:nth-child(2) {
+  width: 200px;           /* Cliente */
+}
+
+#dashboard-today-appointments-body td:nth-child(3),
+#dashboard-today-appointments-body th:nth-child(3) {
+  width: 180px;           /* Servicio */
+}
+
+#dashboard-today-appointments-body td:nth-child(4),
+#dashboard-today-appointments-body th:nth-child(4) {
+  width: 140px;           /* Barbero */
+}
+
+#dashboard-today-appointments-body td:nth-child(5),
+#dashboard-today-appointments-body th:nth-child(5) {
+  width: 120px;           /* Estado */
+}
+
+
+/* Tabla de clientes */
+#clients-table-body td,
+#clients-table-body th {
+  padding: 10px 14px;     /* Más espacio interno */
+  font-size: 15px;        /* Texto más grande */
+}
+
+/* Ajustes de ancho por columna */
+#clients-table-body td:nth-child(1),
+#clients-table-body th:nth-child(1) {
+  width: 300px;           /* Nombre */
+}
+
+#clients-table-body td:nth-child(2),
+#clients-table-body th:nth-child(2) {
+  width: 250px;           /* Teléfono */
+}
+
+#clients-table-body td:nth-child(3),
+#clients-table-body th:nth-child(3) {
+  width: 120px;            /* VIP */
+}
+
+#clients-table-body td:nth-child(4),
+#clients-table-body th:nth-child(4) {
+  width: 200px;           /* Acciones */
+}
+
+
+/* Celda de acciones en la tabla de clientes */
+#clients-table-body td:last-child {
+  display: flex;
+  gap: 40px;        /* ← separación entre botones */
+  align-items: center;
+}
+
+
+
+/* Tabla de Citas por Fecha */
+#appointments-table-body td,
+#appointments-table-body th {
+  padding: 10px 14px;     /* Más espacio interno */
+  font-size: 15px;        /* Texto más grande */
+}
+
+/* Ajustes de ancho por columna */
+#appointments-table-body td:nth-child(1),
+#appointments-table-body th:nth-child(1) {
+  width: 120px;           /* Fecha */
+}
+
+#appointments-table-body td:nth-child(2),
+#appointments-table-body th:nth-child(2) {
+  width: 90px;            /* Hora */
+}
+
+#appointments-table-body td:nth-child(3),
+#appointments-table-body th:nth-child(3) {
+  width: 180px;           /* Cliente */
+}
+
+#appointments-table-body td:nth-child(4),
+#appointments-table-body th:nth-child(4) {
+  width: 160px;           /* Servicio */
+}
+
+#appointments-table-body td:nth-child(5),
+#appointments-table-body th:nth-child(5) {
+  width: 120px;           /* Barbero */
+}
+
+#appointments-table-body td:nth-child(6),
+#appointments-table-body th:nth-child(6) {
+  width: 120px;           /* Estado */
+}
+
+#appointments-table-body td:nth-child(7),
+#appointments-table-body th:nth-child(7) {
+  width: 100px;           /* Total */
+}
+
+#appointments-table-body td:nth-child(8),
+#appointments-table-body th:nth-child(8) {
+  width: 160px;           /* Acciones */
+  display: flex;
+  gap: 10px;              /* separación entre botones */
+}
+
+
+
+/* Tabla de servicios */
+#services-table-body td,
+#services-table-body th {
+  padding: 10px 14px;     /* Más espacio interno */
+  font-size: 15px;        /* Texto más grande */
+}
+
+/* Ajustes de ancho por columna */
+#services-table-body td:nth-child(1),
+#services-table-body th:nth-child(1) {
+  width: 500px;           /* Nombre */
+}
+
+#services-table-body td:nth-child(2),
+#services-table-body th:nth-child(2) {
+  width: 220px;           /* Duración */
+}
+
+#services-table-body td:nth-child(3),
+#services-table-body th:nth-child(3) {
+  width: 220px;           /* Precio */
+}
+
+#services-table-body td:nth-child(4),
+#services-table-body th:nth-child(4) {
+  width: 200px;           /* Activo */
+}
+
+#services-table-body td:nth-child(5),
+#services-table-body th:nth-child(5) {
+  width: 380px;           /* Acciones */
+  display: flex;
+  gap: 10px;              /* separación entre botones */
+}
+
+/* Celda de acciones en la tabla de servicios */
+#services-table-body td:last-child {
+  display: flex;
+  gap: 40px;        /* ← separación entre botones */
+  align-items: center;
+}
+
+
+
+/* Tabla: Cortes del día */
+#cuts-today-table td,
+#cuts-today-table th {
+  padding: 10px 14px;
+  font-size: 15px;
+}
+
+/* Ajustes de ancho por columna */
+#cuts-today-table td:nth-child(1),
+#cuts-today-table th:nth-child(1) {
+  width: 190px;     /* Hora */
+}
+
+#cuts-today-table td:nth-child(2),
+#cuts-today-table th:nth-child(2) {
+  width: 380px;    /* Cliente */
+}
+
+#cuts-today-table td:nth-child(3),
+#cuts-today-table th:nth-child(3) {
+  width: 360px;    /* Servicio */
+}
+
+#cuts-today-table td:nth-child(4),
+#cuts-today-table th:nth-child(4) {
+  width: 260px;    /* Barbero */
+}
+
+#cuts-today-table td:nth-child(5),
+#cuts-today-table th:nth-child(5) {
+  width: 180px;    /* Total */
+}
+
+
+/* Tabla: Historial de cortes */
+#cuts-history-table td,
+#cuts-history-table th {
+  padding: 10px 14px;
+  font-size: 15px;
+}
+
+/* Ajustes de ancho por columna */
+#cuts-history-table td:nth-child(1),
+#cuts-history-table th:nth-child(1) {
+  width: 190px;    /* Fecha */
+}
+
+#cuts-history-table td:nth-child(2),
+#cuts-history-table th:nth-child(2) {
+  width: 180px;     /* Hora */
+}
+
+#cuts-history-table td:nth-child(3),
+#cuts-history-table th:nth-child(3) {
+  width: 280px;    /* Cliente */
+}
+
+#cuts-history-table td:nth-child(4),
+#cuts-history-table th:nth-child(4) {
+  width: 360px;    /* Servicio */
+}
+
+#cuts-history-table td:nth-child(5),
+#cuts-history-table th:nth-child(5) {
+  width: 220px;    /* Barbero */
+}
+
+#cuts-history-table td:nth-child(6),
+#cuts-history-table th:nth-child(6) {
+  width: 120px;    /* Total */
+}
