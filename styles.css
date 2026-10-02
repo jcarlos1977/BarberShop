@@ -48,7 +48,7 @@ body {
 }
 
 .app-main {
-  padding: 16px;
+  padding: 5px;
 }
 
 .tab-section {
@@ -76,7 +76,7 @@ body {
 .dashboard-grid,
 .reports-grid {
   display: grid;
-  grid-template-columns: 1.3fr 2fr 2fr;
+  grid-template-columns: 2.4fr 1.4fr 1.5fr;
   gap: 16px;
 }
 
