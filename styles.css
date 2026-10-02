@@ -171,19 +171,21 @@ button.small {
 
 
 
-
 .dashboard-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-right: 0px
 }
 
-
+.dashboard-actions button.primary-btn {
+  margin: 0;
+}
 
 .dashboard-actions button.primary-btn + button.primary-btn {
-  margin-left: -1100px;  /* ← separación normal entre botones */
+  margin-left: 10px; /* separación normal entre botones */
 }
+
+
 
 
 
