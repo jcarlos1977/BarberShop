@@ -9,11 +9,15 @@ function switchTab(tabId) {
   });
 }
 
-function renderClientsTable() {
+function renderClientsTable(filterText = "") {
   const tbody = document.getElementById("clients-table-body");
   tbody.innerHTML = "";
 
-  clients.forEach(client => {
+  const filteredClients = clients.filter(client =>
+    client.name.toLowerCase().includes(filterText.toLowerCase())
+  );
+
+  filteredClients.forEach(client => {
     const tr = document.createElement("tr");
 
     tr.innerHTML = `
@@ -24,13 +28,22 @@ function renderClientsTable() {
       <td>
         <button class="small edit-client-btn" data-id="${client.id}">Editar</button>
         <button class="small delete-client-btn" data-id="${client.id}">Eliminar</button>
+
+        <!-- ⭐ Botones de fotos -->
+        <button class="small photo-before-btn" data-id="${client.id}">Antes</button>
+        <button class="small photo-after-btn" data-id="${client.id}">Después</button>
       </td>
+
     `;
 
     tbody.appendChild(tr);
   });
 }
 
+
+document.getElementById("client-search").addEventListener("input", (e) => {
+  renderClientsTable(e.target.value);
+});
 
 function renderClientsSelect() {
   const select = document.getElementById("appointment-client");
@@ -43,10 +56,15 @@ function renderClientsSelect() {
   });
 }
 
-function renderServicesTable() {
+function renderServicesTable(filterText = "") {
   const tbody = document.getElementById("services-table-body");
   tbody.innerHTML = "";
-  services.forEach(service => {
+
+  const filtered = services.filter(service =>
+    service.name.toLowerCase().includes(filterText.toLowerCase())
+  );
+
+  filtered.forEach(service => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${service.name}</td>
@@ -57,11 +75,17 @@ function renderServicesTable() {
         <button class="small" onclick="editService('${service.id}')">Editar</button>
         <button class="small" onclick="deleteService('${service.id}')">Eliminar</button>
       </td>
-
     `;
     tbody.appendChild(tr);
   });
 }
+
+
+
+document.getElementById("service-search").addEventListener("input", (e) => {
+  renderServicesTable(e.target.value);
+});
+
 
 function renderServicesSelect() {
   const select = document.getElementById("appointment-service");
@@ -76,12 +100,18 @@ function renderServicesSelect() {
     });
 }
 
-function renderInventoryTable() {
+function renderInventoryTable(filterText = "") {
   const tbody = document.getElementById("inventory-table-body");
   tbody.innerHTML = "";
-  inventory.forEach(item => {
+
+  const filtered = inventory.filter(item =>
+    item.name.toLowerCase().includes(filterText.toLowerCase())
+  );
+
+  filtered.forEach(item => {
     const statusClass = item.qty <= item.min ? "status-low" : "status-ok";
     const statusText = item.qty <= item.min ? "Bajo" : "OK";
+
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${item.name}</td>
@@ -98,21 +128,39 @@ function renderInventoryTable() {
   });
 }
 
-function renderAppointmentsTable(dateFilter) {
+
+document.getElementById("inventory-search").addEventListener("input", (e) => {
+  renderInventoryTable(e.target.value);
+});
+
+
+function renderAppointmentsTable(dateFilter = "", nameFilter = "") {
   const tbody = document.getElementById("appointments-table-body");
   tbody.innerHTML = "";
+
   let filtered = appointments;
+
+  // Filtro por fecha
   if (dateFilter) {
-    filtered = appointments.filter(a => a.date === dateFilter);
+    filtered = filtered.filter(a => a.date === dateFilter);
   }
+
+  // Filtro por nombre del cliente
+  if (nameFilter.trim() !== "") {
+    filtered = filtered.filter(app => {
+      const client = clients.find(c => c.id === app.clientId);
+      return client && client.name.toLowerCase().includes(nameFilter.toLowerCase());
+    });
+  }
+
   filtered.forEach(app => {
     const client = clients.find(c => c.id === app.clientId);
     const service = services.find(s => s.id == app.serviceId);
     const total = service ? service.price : 0;
+
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${formatDateMMDDYYYY(app.date)}</td>
-
       <td>${formatTimeTo12Hour(app.time)}</td>
       <td>${client ? client.name : "—"}</td>
       <td>${service ? service.name : "—"}</td>
@@ -127,6 +175,13 @@ function renderAppointmentsTable(dateFilter) {
     tbody.appendChild(tr);
   });
 }
+
+
+document.getElementById("appointment-search").addEventListener("input", (e) => {
+  const date = document.getElementById("appointments-filter-date").value;
+  renderAppointmentsTable(date, e.target.value);
+});
+
 
 function renderDashboard() {
   const today = new Date().toLocaleDateString("en-CA");
