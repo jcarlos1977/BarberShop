@@ -24,6 +24,7 @@
     <button data-tab="cuts" class="nav-btn">Cortes</button>
     <button data-tab="reports" class="nav-btn">Reportes</button>
     <button data-tab="settings" class="nav-btn">Configuración</button>
+    <button data-tab="service-photos" class="nav-btn">Fotos de Servicios</button>
   </nav>
 
   <main class="app-main">
@@ -399,12 +400,29 @@
         <button id="settings-save-btn">Guardar configuración</button>
       </div>
     </section>
+    
+    <section id="tab-service-photos" class="tab-section">
+      <h2>Fotos de Servicios</h2>
+      <div id="service-photos-container" class="photos-grid"></div>
+    </section>
+
+
+
+
+
   </main>
 
   <footer class="app-footer">
     <span>Estética / Barbería - Sistema de gestión local (localStorage)</span>
   </footer>
-
+  
+  <!-- ⭐ MODAL DE FOTOS (PÉGALO AQUÍ) -->
+  <div id="photo-modal" class="photo-modal">
+    <span id="photo-modal-close" class="photo-modal-close">&times;</span>
+    <img id="photo-modal-img" class="photo-modal-img">
+    <p id="photo-modal-name" class="photo-modal-name"></p>
+  </div>
+  
   <script src="storage.js"></script>
   <script src="models.js"></script>
   <script src="logic.js"></script>
