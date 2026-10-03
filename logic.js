@@ -8,7 +8,7 @@ function generateIncomeReport(fromDate, toDate) {
 
 
   const citasTotal = completedAppointments.reduce((sum, a) => {
-    const service = services.find(s => s.id === a.serviceId);
+    const service = services.find(s => s.id == a.serviceId);
     return sum + (service ? service.price : 0);
   }, 0);
 
@@ -28,7 +28,7 @@ function generateIncomeReport(fromDate, toDate) {
 function getTopServices() {
   const counts = {};
   appointments.forEach(app => {
-    const service = services.find(s => s.id === app.serviceId);
+    const service = services.find(s => s.id == app.serviceId);
     if (!service) return;
     counts[service.name] = (counts[service.name] || 0) + 1;
   });
@@ -127,8 +127,9 @@ function renderCutsToday() {
 
   combined.forEach(item => {
     const client = clients.find(c => c.id === item.clientId);
-    const service = services.find(s => s.id === item.serviceId);
-    const price = service ? service.price : item.price;
+    const service = services.find(s => s.id == item.serviceId);
+    const price = service && service.price ? service.price : (item.price || 0);
+
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -167,8 +168,9 @@ function renderCutsHistory(dateFilter = null) {
 
   combined.forEach(item => {
     const client = clients.find(c => c.id === item.clientId);
-    const service = services.find(s => s.id === item.serviceId);
-    const price = service ? service.price : item.price;
+    const service = services.find(s => s.id == item.serviceId);
+    const price = service && service.price ? service.price : (item.price || 0);
+
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -219,7 +221,7 @@ function calculateTodayIncome() {
   );
 
   const citasTotal = completedAppointments.reduce((sum, a) => {
-    const service = services.find(s => s.id === a.serviceId);
+    const service = services.find(s => s.id == a.serviceId);
     return sum + (service ? service.price : 0);
   }, 0);
 
