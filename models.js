@@ -1,7 +1,7 @@
 // models.js
 
 let clients = loadFromStorage(STORAGE_KEYS.clients);
-let services = loadFromStorage(STORAGE_KEYS.services);
+//let services = loadFromStorage(STORAGE_KEYS.services);
 let appointments = loadFromStorage(STORAGE_KEYS.appointments);
 let inventory = loadFromStorage(STORAGE_KEYS.inventory);
 let settings = loadSettings();
@@ -28,19 +28,32 @@ function deleteClient(id) {
 
 // SERVICIOS
 function addOrUpdateService(service) {
+  // Si no tiene ID, generar uno nuevo
   if (!service.id) {
-    service.id = generateId("srv");
-    services.push(service);
-  } else {
-    services = services.map(s => (s.id === service.id ? service : s));
+    service.id = Date.now().toString();
   }
-  saveToStorage(STORAGE_KEYS.services, services);
+
+  const index = services.findIndex(s => s.id == service.id);
+
+  if (index >= 0) {
+    // EDITAR
+    services[index] = service;
+  } else {
+    // AGREGAR NUEVO
+    services.push(service);
+  }
+
+  localStorage.setItem("barber_app_services", JSON.stringify(services));
 }
 
+
 function deleteService(id) {
-  services = services.filter(s => s.id !== id);
-  saveToStorage(STORAGE_KEYS.services, services);
+  services = services.filter(s => s.id != id);
+  localStorage.setItem("barber_app_services", JSON.stringify(services));
+  renderServicesTable();
+  renderServicesSelect();
 }
+
 
 // CITAS
 function addOrUpdateAppointment(app) {
