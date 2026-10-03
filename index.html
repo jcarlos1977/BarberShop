@@ -121,19 +121,28 @@
 
         <div class="card">
           <h3>Listado de clientes</h3>
+
+          <!-- ⭐ Campo de búsqueda -->
+          <input 
+            type="text" 
+            id="client-search" 
+            placeholder="Buscar cliente por nombre..." 
+            style="width: 100%; padding: 8px; margin-bottom: 10px;"
+          >
+
           <table>
             <thead>
               <tr>
                 <th>Nombre</th>
                 <th>Teléfono</th>
                 <th>VIP</th>
-                
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody id="clients-table-body"></tbody>
           </table>
         </div>
+
       </div>
     </section>
 
@@ -179,6 +188,14 @@
           <label>Fecha</label>
           <input type="date" id="appointments-filter-date" />
           <button id="appointments-filter-btn">Filtrar</button>
+
+          <input 
+            type="text" 
+            id="appointment-search" 
+            placeholder="Buscar por nombre del cliente..." 
+            style="width: 100%; padding: 8px; margin: 10px 0;"
+          >
+
 
           <table>
             <thead>
@@ -231,6 +248,14 @@
         <label>Fecha</label>
         <input type="date" id="cuts-filter-date" />
         <button id="cuts-filter-btn">Filtrar</button>
+
+        <input 
+          type="text" 
+          id="cuts-search" 
+          placeholder="Buscar por nombre del cliente..." 
+          style="width: 100%; padding: 8px; margin: 10px 0;"
+        >
+
 
         <table>
           <thead>
@@ -301,6 +326,14 @@
 
         <div class="card">
           <h3>Listado de servicios</h3>
+
+          <input 
+            type="text" 
+            id="service-search" 
+            placeholder="Buscar servicio por nombre..." 
+            style="width: 100%; padding: 8px; margin-bottom: 10px;"
+          >
+
           <table>
             <thead>
               <tr>
@@ -314,6 +347,7 @@
             <tbody id="services-table-body"></tbody>
           </table>
         </div>
+
       </div>
     </section>
 
@@ -345,6 +379,14 @@
 
         <div class="card">
           <h3>Listado de inventario</h3>
+
+          <input 
+            type="text" 
+            id="inventory-search" 
+            placeholder="Buscar producto..." 
+            style="width: 100%; padding: 8px; margin-bottom: 10px;"
+          >
+
           <table>
             <thead>
               <tr>
@@ -359,6 +401,7 @@
             <tbody id="inventory-table-body"></tbody>
           </table>
         </div>
+
       </div>
     </section>
 
@@ -422,6 +465,21 @@
     <img id="photo-modal-img" class="photo-modal-img">
     <p id="photo-modal-name" class="photo-modal-name"></p>
   </div>
+
+
+  <div id="client-photo-modal" class="photo-modal">
+    <span id="client-photo-close" class="photo-modal-close">&times;</span>
+
+    <h3 id="client-photo-title"></h3>
+
+    <img id="client-photo-img" class="photo-modal-img">
+
+    <input type="file" id="client-photo-input" accept="image/*" style="margin-top: 15px;">
+
+    <button id="client-photo-save" class="primary-btn" style="margin-top: 10px;">Guardar foto</button>
+    <button id="client-photo-delete" class="danger-btn" style="margin-top: 10px;">Eliminar foto</button>
+  </div>
+
   
   <script src="storage.js"></script>
   <script src="models.js"></script>
