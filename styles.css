@@ -30,6 +30,7 @@ body {
   gap: 8px;
   padding: 8px 16px;
   background: #1f2937;
+  flex-wrap: wrap;  
 }
 
 .nav-btn {
@@ -40,6 +41,7 @@ body {
   cursor: pointer;
   border-radius: 4px;
   font-size: 0.9rem;
+  flex-shrink: 0
 }
 
 .nav-btn.active {
@@ -175,6 +177,7 @@ button.small {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  
 }
 
 .dashboard-actions button.primary-btn {
