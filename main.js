@@ -624,3 +624,79 @@ document.getElementById("photo-modal").addEventListener("click", (e) => {
   }
 });
 
+let currentPhotoClientId = null;
+let currentPhotoType = null; // "before" o "after"
+
+document.addEventListener("click", e => {
+  if (e.target.classList.contains("photo-before-btn")) {
+    openClientPhotoModal(e.target.dataset.id, "before");
+  }
+  if (e.target.classList.contains("photo-after-btn")) {
+    openClientPhotoModal(e.target.dataset.id, "after");
+  }
+});
+
+function openClientPhotoModal(clientId, type) {
+  currentPhotoClientId = clientId;
+  currentPhotoType = type;
+
+  const client = clients.find(c => c.id === clientId);
+
+  document.getElementById("client-photo-title").textContent =
+    type === "before" ? "Foto ANTES" : "Foto DESPUÉS";
+
+  const img = document.getElementById("client-photo-img");
+  img.src = client[type === "before" ? "photoBefore" : "photoAfter"] || "";
+
+  document.getElementById("client-photo-modal").style.display = "flex";
+}
+
+
+document.getElementById("client-photo-save").addEventListener("click", () => {
+  const fileInput = document.getElementById("client-photo-input");
+  const file = fileInput.files[0];
+
+  if (!file) return alert("Selecciona una foto primero.");
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const base64 = e.target.result;
+
+    const client = clients.find(c => c.id === currentPhotoClientId);
+
+    if (currentPhotoType === "before") {
+      client.photoBefore = base64;
+    } else {
+      client.photoAfter = base64;
+    }
+
+    saveToStorage(STORAGE_KEYS.clients, clients);
+    closeClientPhotoModal();
+    renderClientsTable();
+  };
+
+  reader.readAsDataURL(file);
+});
+
+
+
+document.getElementById("client-photo-delete").addEventListener("click", () => {
+  const client = clients.find(c => c.id === currentPhotoClientId);
+
+  if (currentPhotoType === "before") {
+    client.photoBefore = null;
+  } else {
+    client.photoAfter = null;
+  }
+
+  saveToStorage(STORAGE_KEYS.clients, clients);
+  closeClientPhotoModal();
+  renderClientsTable();
+});
+
+
+function closeClientPhotoModal() {
+  document.getElementById("client-photo-modal").style.display = "none";
+}
+
+document.getElementById("client-photo-close").addEventListener("click", closeClientPhotoModal);
