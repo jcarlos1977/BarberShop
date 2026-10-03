@@ -133,7 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const action = btn.dataset.action;
 
     if (action === "edit") {
-      const service = services.find(s => s.id === id);
+      const service = services.find(s => s.id == id);
       if (!service) return;
 
       document.getElementById("service-id").value = service.id;
@@ -335,7 +335,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const barber = document.getElementById("walkin-barber").value.trim();
     const notes = document.getElementById("walkin-notes").value.trim();
 
-    const service = services.find(s => s.id === serviceId);
+    const service = services.find(s => s.id == serviceId);
     const price = service ? service.price : 0;
 
     const time = new Date().toTimeString().slice(0, 5); // HH:MM
@@ -390,6 +390,8 @@ document.addEventListener("DOMContentLoaded", () => {
   setInterval(() => {
     refreshNewClientsToday();
   }, 1000);
+
+  renderServicesTable();
 
 });
 
@@ -470,3 +472,94 @@ document.addEventListener("click", function(e) {
     renderDashboardIncome();
   }
 });
+
+
+
+const defaultServices = [
+  // ============================
+  // HOMBRES (36 servicios)
+  // ============================
+  { id: 1, name: "Low Fade", duration: 30, price: 30, active: true },
+  { id: 2, name: "Taper Fade", duration: 30, price: 30, active: true },
+  { id: 3, name: "High Fade", duration: 30, price: 30, active: true },
+  { id: 4, name: "Spiky Hair", duration: 30, price: 30, active: true },
+  { id: 5, name: "Pompadour", duration: 45, price: 40, active: true },
+  { id: 6, name: "Faux Hawk", duration: 30, price: 30, active: true },
+  { id: 7, name: "Undercut", duration: 40, price: 35, active: true },
+  { id: 8, name: "Textured Crop", duration: 30, price: 30, active: true },
+  { id: 9, name: "Quiff", duration: 40, price: 35, active: true },
+  { id: 10, name: "Hard Part", duration: 30, price: 30, active: true },
+  { id: 11, name: "Crew Cut", duration: 20, price: 25, active: true },
+  { id: 12, name: "Low Cut", duration: 20, price: 25, active: true },
+  { id: 13, name: "Drop Fade", duration: 30, price: 30, active: true },
+  { id: 14, name: "Burst Fade", duration: 30, price: 30, active: true },
+  { id: 15, name: "Comb Over", duration: 40, price: 35, active: true },
+  { id: 16, name: "Fringe Crop Fade", duration: 30, price: 30, active: true },
+  { id: 17, name: "Curly High Fade", duration: 40, price: 35, active: true },
+  { id: 18, name: "High Top Fade", duration: 40, price: 35, active: true },
+  { id: 19, name: "Box Fade", duration: 40, price: 35, active: true },
+  { id: 20, name: "Mid Skin Fade", duration: 30, price: 30, active: true },
+  { id: 21, name: "Buzz Cut with Fade", duration: 20, price: 25, active: true },
+  { id: 22, name: "Classic Taper Fade", duration: 30, price: 30, active: true },
+  { id: 23, name: "Skin Fade with Short Curls", duration: 40, price: 35, active: true },
+  { id: 24, name: "Shadow Fade", duration: 30, price: 30, active: true },
+
+  // Nuevos (basados en tus fotos)
+  { id: 25, name: "Razor Fade", duration: 40, price: 40, active: true },
+  { id: 26, name: "Temple Fade", duration: 30, price: 30, active: true },
+  { id: 27, name: "Mohawk Fade", duration: 40, price: 40, active: true },
+  { id: 28, name: "Blowout Fade", duration: 35, price: 35, active: true },
+  { id: 29, name: "French Crop", duration: 30, price: 30, active: true },
+  { id: 30, name: "Edgar Cut", duration: 30, price: 30, active: true },
+  { id: 31, name: "Mullet Moderno", duration: 40, price: 40, active: true },
+  { id: 32, name: "Caesar Cut", duration: 25, price: 25, active: true },
+  { id: 33, name: "Line Up + Fade", duration: 30, price: 30, active: true },
+  { id: 34, name: "Fade con Diseño", duration: 45, price: 45, active: true },
+  { id: 35, name: "Afro Shape Up", duration: 40, price: 40, active: true },
+  { id: 36, name: "Waves + Shape Up", duration: 35, price: 35, active: true },
+
+  // ============================
+  // MUJERES (20 servicios)
+  // ============================
+  { id: 37, name: "Corte de Mujer Largo", duration: 45, price: 45, active: true },
+  { id: 38, name: "Corte de Mujer Medio", duration: 40, price: 40, active: true },
+  { id: 39, name: "Corte de Mujer Corto", duration: 35, price: 35, active: true },
+  { id: 40, name: "Capas Largas", duration: 45, price: 45, active: true },
+  { id: 41, name: "Capas Medias", duration: 40, price: 40, active: true },
+  { id: 42, name: "Fleco / Bangs", duration: 20, price: 20, active: true },
+  { id: 43, name: "Blowout Mujer", duration: 45, price: 45, active: true },
+  { id: 44, name: "Plancha / Straight Hair", duration: 40, price: 40, active: true },
+  { id: 45, name: "Rizos con Tenaza", duration: 45, price: 45, active: true },
+  { id: 46, name: "Peinado Elegante", duration: 60, price: 60, active: true },
+  { id: 47, name: "Peinado Casual", duration: 40, price: 40, active: true },
+  { id: 48, name: "Tinte Completo", duration: 120, price: 120, active: true },
+  { id: 49, name: "Retoque de Raíz", duration: 60, price: 60, active: true },
+  { id: 50, name: "Balayage", duration: 150, price: 150, active: true },
+  { id: 51, name: "Mechas / Highlights", duration: 120, price: 120, active: true },
+  { id: 52, name: "Matiz / Toner", duration: 45, price: 45, active: true },
+  { id: 53, name: "Tratamiento Capilar", duration: 45, price: 45, active: true },
+  { id: 54, name: "Botox Capilar", duration: 90, price: 90, active: true },
+  { id: 55, name: "Keratina", duration: 120, price: 150, active: true },
+  { id: 56, name: "Depilación de Cejas", duration: 15, price: 15, active: true },
+  { id: 57, name: "Test1", duration: 15, price: 15, active: true }
+];
+
+
+
+let services = JSON.parse(localStorage.getItem("barber_app_services") || "[]");
+
+// Mezclar defaultServices con los guardados
+defaultServices.forEach(def => {
+  const exists = services.some(s => s.id == def.id);
+  if (!exists) {
+    services.push(def); // agrega solo los nuevos
+  }
+});
+
+// Guardar mezcla final
+localStorage.setItem("barber_app_services", JSON.stringify(services));
+
+// Renderizar
+renderServicesSelect();
+renderServicesTable();
+            // ← NECESARIO
