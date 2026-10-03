@@ -560,3 +560,58 @@ table {
 #cuts-history-table th:nth-child(6) {
   width: 120px;    /* Total */
 }
+
+/*-------------------------------Fotos------------------------------------*/
+
+.photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 15px;
+  padding: 20px;
+}
+
+.photos-grid img {
+  width: 100%;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+
+
+.photo-modal {
+  display: none;
+  position: fixed;
+  z-index: 9999;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.8);
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+.photo-modal-img {
+  max-width: 80%;
+  max-height: 80%;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+.photo-modal-name {
+  color: white;
+  margin-top: 15px;
+  font-size: 20px;
+  text-align: center;
+}
+
+.photo-modal-close {
+  position: absolute;
+  top: 20px;
+  right: 30px;
+  font-size: 40px;
+  color: white;
+  cursor: pointer;
+}
