@@ -7,8 +7,13 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.addEventListener("click", () => {
       switchTab(btn.dataset.tab);
       refreshAll();
+
+      if (btn.dataset.tab === "service-photos") {
+        renderServicePhotos();
+      }
     });
   });
+
 
   // Inicialización general
   renderClientsTable();
@@ -561,5 +566,61 @@ localStorage.setItem("barber_app_services", JSON.stringify(services));
 
 // Renderizar
 renderServicesSelect();
-renderServicesTable();
-            // ← NECESARIO
+renderServicesTable(); // ← NECESARIO
+
+
+
+const servicePhotos = [
+  // Hombres (ejemplo)
+  { name: "Foto1", url: "Man1.png" },
+  { name: "Foto2", url: "Man2.png" },
+  { name: "Foto3", url: "Man3.png" },
+
+  // Mujeres (ejemplo)
+  { name: "Foto4", url: "Woman1.png" },
+ 
+
+  // Agrega aquí todas las fotos que quieras
+];
+
+
+function renderServicePhotos() {
+  const container = document.getElementById("service-photos-container");
+  container.innerHTML = "";
+
+  servicePhotos.forEach(photo => {
+    const div = document.createElement("div");
+    div.innerHTML = `
+      <img src="${photo.url}" alt="${photo.name}" class="photo-thumb">
+      <p>${photo.name}</p>
+    `;
+    div.querySelector("img").addEventListener("click", () => {
+      openPhotoModal(photo);
+    });
+    container.appendChild(div);
+  });
+}
+
+
+function openPhotoModal(photo) {
+  const modal = document.getElementById("photo-modal");
+  const modalImg = document.getElementById("photo-modal-img");
+  const modalName = document.getElementById("photo-modal-name");
+
+  modalImg.src = photo.url;
+  modalName.textContent = photo.name;
+
+  modal.style.display = "flex";
+}
+
+
+document.getElementById("photo-modal-close").addEventListener("click", () => {
+  document.getElementById("photo-modal").style.display = "none";
+});
+
+document.getElementById("photo-modal").addEventListener("click", (e) => {
+  if (e.target.id === "photo-modal") {
+    document.getElementById("photo-modal").style.display = "none";
+  }
+});
+
