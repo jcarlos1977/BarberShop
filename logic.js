@@ -145,37 +145,49 @@ function renderCutsToday() {
 }
 
 
-function renderCutsHistory(dateFilter = null) {
+function renderCutsHistory(dateFilter = null, nameFilter = "") {
   const tbody = document.getElementById("cuts-history-table");
   tbody.innerHTML = "";
 
+  // Walk-ins filtrados
   let walkins = walkinCuts;
   if (dateFilter) {
     walkins = walkinCuts.filter(c => c.date === dateFilter);
   }
 
+  // Citas completadas filtradas
   let citas = appointments.filter(a => a.status === "completada");
   if (dateFilter) {
     citas = citas.filter(a => a.date === dateFilter);
   }
 
-  const combined = [
+  // Combinar ambos
+  let combined = [
     ...walkins.map(w => ({ ...w, type: "walkin" })),
     ...citas.map(a => ({ ...a, type: "cita" }))
   ];
 
+  // ⭐ Filtro por nombre del cliente
+  if (nameFilter.trim() !== "") {
+    combined = combined.filter(item => {
+      const client = clients.find(c => c.id === item.clientId);
+      const name = client ? client.name : "Walk-in";
+      return name.toLowerCase().includes(nameFilter.toLowerCase());
+    });
+  }
+
+  // Ordenar por hora
   combined.sort((a, b) => a.time.localeCompare(b.time));
 
+  // Renderizar
   combined.forEach(item => {
     const client = clients.find(c => c.id === item.clientId);
     const service = services.find(s => s.id == item.serviceId);
     const price = service && service.price ? service.price : (item.price || 0);
 
-
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${formatDateMMDDYYYY(item.date)}</td>
-
       <td>${formatTimeTo12Hour(item.time)}</td>
       <td>${client ? client.name : "Walk-in"}</td>
       <td>${service ? service.name : "—"}</td>
@@ -190,6 +202,13 @@ function renderCutsHistory(dateFilter = null) {
     tbody.appendChild(tr);
   });
 }
+
+
+
+document.getElementById("cuts-search").addEventListener("input", (e) => {
+  const date = document.getElementById("cuts-filter-date").value;
+  renderCutsHistory(date, e.target.value);
+});
 
 
 
