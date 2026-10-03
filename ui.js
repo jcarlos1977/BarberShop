@@ -54,9 +54,10 @@ function renderServicesTable() {
       <td>$${service.price.toFixed(2)}</td>
       <td>${service.active ? "Sí" : "No"}</td>
       <td>
-        <button class="small" data-action="edit" data-id="${service.id}">Editar</button>
-        <button class="small" data-action="delete" data-id="${service.id}">Eliminar</button>
+        <button class="small" onclick="editService('${service.id}')">Editar</button>
+        <button class="small" onclick="deleteService('${service.id}')">Eliminar</button>
       </td>
+
     `;
     tbody.appendChild(tr);
   });
@@ -106,7 +107,7 @@ function renderAppointmentsTable(dateFilter) {
   }
   filtered.forEach(app => {
     const client = clients.find(c => c.id === app.clientId);
-    const service = services.find(s => s.id === app.serviceId);
+    const service = services.find(s => s.id == app.serviceId);
     const total = service ? service.price : 0;
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -138,7 +139,7 @@ function renderDashboard() {
   summaryAppointments.textContent = `Citas hoy: ${todayAppointments.length}`;
 
   const totalIncome = todayAppointments.reduce((sum, app) => {
-    const service = services.find(s => s.id === app.serviceId);
+    const service = services.find(s => s.id == app.serviceId);
     return sum + (service ? service.price : 0);
   }, 0);
   summaryIncome.textContent = `Ingresos estimados: $${totalIncome.toFixed(2)}`;
@@ -148,7 +149,7 @@ function renderDashboard() {
   tbody.innerHTML = "";
   todayAppointments.forEach(app => {
     const client = clients.find(c => c.id === app.clientId);
-    const service = services.find(s => s.id === app.serviceId);
+    const service = services.find(s => s.id == app.serviceId);
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${formatTimeTo12Hour(app.time)}</td>
@@ -174,7 +175,7 @@ function renderDashboard() {
   topServicesList.innerHTML = "";
   const counts = {};
   appointments.forEach(app => {
-    const service = services.find(s => s.id === app.serviceId);
+    const service = services.find(s => s.id == app.serviceId);
     if (!service) return;
     counts[service.name] = (counts[service.name] || 0) + 1;
   });
@@ -256,4 +257,27 @@ function refreshNewClientsToday() {
       li.textContent = `${c.name} (${c.phone})`;
       newClientsList.appendChild(li);
     });
+}
+
+function populateAppointmentServicesSelect() {
+  const select = document.getElementById("appointment-service");
+  select.innerHTML = '<option value="">Selecciona servicio</option>';
+
+  services.forEach(service => {
+    const opt = document.createElement("option");
+    opt.value = service.id;          // 👈 IMPORTANTE
+    opt.textContent = service.name;
+    select.appendChild(opt);
+  });
+}
+
+function editService(id) {
+  const s = services.find(x => x.id == id);
+  if (!s) return;
+
+  document.getElementById("service-id").value = s.id;
+  document.getElementById("service-name").value = s.name;
+  document.getElementById("service-duration").value = s.duration;
+  document.getElementById("service-price").value = s.price;
+  document.getElementById("service-active").checked = s.active;
 }
