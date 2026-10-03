@@ -13,13 +13,32 @@ function generateId(prefix) {
 // CLIENTES
 function addOrUpdateClient(client) {
   if (!client.id) {
+    // Cliente nuevo
     client.id = generateId("cli");
+    client.photoBefore = null;
+    client.photoAfter = null;
     clients.push(client);
   } else {
-    clients = clients.map(c => (c.id === client.id ? client : c));
+    // Cliente existente: NO reemplazar todo el objeto
+    clients = clients.map(c => {
+      if (c.id === client.id) {
+        return {
+          ...c,              // ⭐ Mantiene fotos existentes
+          name: client.name,
+          phone: client.phone,
+          notes: client.notes,
+          vip: client.vip,
+          createdDate: client.createdDate
+        };
+      }
+      return c;
+    });
   }
+
   saveToStorage(STORAGE_KEYS.clients, clients);
 }
+
+
 
 function deleteClient(id) {
   clients = clients.filter(c => c.id !== id);
