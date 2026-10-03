@@ -137,6 +137,8 @@
                 <th>Teléfono</th>
                 <th>VIP</th>
                 <th>Acciones</th>
+                <th>Fotos Antes</th>
+                <th>Fotos Despues</th>
               </tr>
             </thead>
             <tbody id="clients-table-body"></tbody>
@@ -468,17 +470,26 @@
 
 
   <div id="client-photo-modal" class="photo-modal">
-    <span id="client-photo-close" class="photo-modal-close">&times;</span>
+    <div class="photo-modal-content">
 
-    <h3 id="client-photo-title"></h3>
+      <span id="client-photo-close" class="photo-modal-close">&times;</span>
 
-    <img id="client-photo-img" class="photo-modal-img">
+      <h3 id="client-photo-title" class="photo-modal-title"></h3>
 
-    <input type="file" id="client-photo-input" accept="image/*" style="margin-top: 15px;">
+      <div class="photo-preview-container">
+        <img id="client-photo-img" class="photo-modal-img">
+      </div>
 
-    <button id="client-photo-save" class="primary-btn" style="margin-top: 10px;">Guardar foto</button>
-    <button id="client-photo-delete" class="danger-btn" style="margin-top: 10px;">Eliminar foto</button>
+      <div class="photo-actions">
+        <input type="file" id="client-photo-input" accept="image/*" class="photo-input">
+
+        <button id="client-photo-save" class="photo-btn save-btn">Guardar foto</button>
+        <button id="client-photo-delete" class="photo-btn delete-btn">Eliminar foto</button>
+      </div>
+
+    </div>
   </div>
+
 
   
   <script src="storage.js"></script>
