@@ -4,9 +4,65 @@
   <meta charset="UTF-8" />
   <title>Estética / Barbería - Gestión</title>
   <link rel="stylesheet" href="styles.css" />
+
+  
+
 </head>
 <body>
+
+
+  <div id="auth-screen" class="login-container">
+    <h2>Iniciar sesión</h2>
+
+    <input id="auth-email" class="login-input" type="email" placeholder="Correo">
+    <input id="auth-password" class="login-input" type="password" placeholder="Contraseña">
+
+    <button id="auth-login-btn" class="primary-btn">Entrar</button>
+
+    <div id="auth-error" class="login-error"></div>
+  </div>
+
+  <div id="app-screen" style="display:none;">
+    <!-- Aquí va toda tu aplicación -->
+    <button id="logout-btn" class="secondary-btn">Cerrar sesión</button>
+  </div>
+
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+
+  <!-- Firestore (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+  <!-- Firebase Auth (compat) con versión 10.7.1 -->
+ <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
+  <script>
+    
+    const firebaseConfig = {
+      apiKey: "AIzaSyBcWtL3B5aNVpEV0ahXSaP3pK00lEbb6rM",
+      authDomain: "restauranteapp-ad17d.firebaseapp.com",
+      databaseURL: "https://restauranteapp-ad17d-default-rtdb.firebaseio.com",
+      projectId: "restauranteapp-ad17d",
+      storageBucket: "restauranteapp-ad17d.firebasestorage.app",
+      messagingSenderId: "132764157748",
+      appId: "1:132764157748:web:5bd87f5caeca177381c761"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    
+    
+
+  </script>
+  
+  
+
+
   <header class="app-header">
+    
+
     <h1>Panel de Gestión - Estética / Barbería</h1>
     <div class="header-summary">
       <span id="summary-today-appointments">Citas hoy: 0</span>
@@ -115,7 +171,7 @@
 
           <div class="form-actions">
             <button type="submit">Guardar cliente</button>
-            <button type="button" id="client-form-reset">Nuevo</button>
+            <button type="button" id="client-form-reset">Resetear</button>
           </div>
         </form>
 
@@ -496,7 +552,21 @@
   <script src="models.js"></script>
   <script src="logic.js"></script>
   <script src="ui.js"></script>
+
+  <!-- Firestore modules -->
+  <script src="dbClients.js"></script>
+  <script src="dbServices.js"></script>
+  <script src="dbAppointments.js"></script>
+  <script src="dbInventory.js"></script>
+  <script src="dbCuts.js"></script>
+  
+  <!-- Main app -->
   <script src="main.js"></script>
+
+  
+
+  
+  
 
 </body>
 </html>
