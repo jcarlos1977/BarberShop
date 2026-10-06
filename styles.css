@@ -441,7 +441,7 @@ table {
 
 #appointments-table-body td:nth-child(8),
 #appointments-table-body th:nth-child(8) {
-  width: 160px;           /* Acciones */
+  width: 260px;           /* Acciones */
   display: flex;
   gap: 10px;              /* separación entre botones */
 }
