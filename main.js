@@ -1,8 +1,100 @@
-// main.js
-
 document.addEventListener("DOMContentLoaded", () => {
 
-  // Navegación entre tabs
+  // ============================
+  // LOGIN / LOGOUT + AUTH STATE
+  // ============================
+
+  auth.onAuthStateChanged(async user => {
+
+    // ============================
+    // USUARIO NO LOGUEADO
+    // ============================
+    if (!user) {
+      document.getElementById("auth-screen").style.display = "block";
+      document.getElementById("app-screen").style.display = "none";
+      return;
+    }
+
+    // ============================
+    // USUARIO LOGUEADO
+    // ============================
+    document.getElementById("auth-screen").style.display = "none";
+    document.getElementById("app-screen").style.display = "block";
+
+    // ============================
+    // 🔥 ORDEN CORRECTO DE CARGA
+    // ============================
+
+    // 1️⃣ Clientes
+    clients = await getClientsFromFirestore();
+    renderClientsTable();
+    renderClientsSelect();
+
+    // 2️⃣ Servicios (primero cargar defaults si no existen)
+    await loadDefaultServicesIntoFirestore();
+    services = await getServicesFromFirestore();
+    renderServicesTable();
+    renderServicesSelect();
+
+    // 3️⃣ Citas
+    appointments = await getAppointmentsFromFirestore();
+    renderAppointmentsTable();
+
+    // 4️⃣ Inventario
+    inventory = await getInventoryFromFirestore();
+    renderInventoryTable();
+
+    // 5️⃣ Walk-in Cuts
+    walkinCuts = await getWalkinCutsFromFirestore();
+
+    // ============================
+    // 🔥 Renderizar todo
+    // ============================
+    renderCutsToday();
+    renderCutsHistory();
+
+    renderDashboard();
+    renderReports();
+    refreshAll();
+
+    // ============================
+    // SELECTS DEL MODAL WALK-IN
+    // ============================
+    fillWalkinSelects();
+
+    // ============================
+    // REFRESCOS AUTOMÁTICOS
+    // ============================
+    setInterval(() => refreshQuickAlerts(), 1000);
+    setInterval(() => refreshNewClientsToday(), 1000);
+    setInterval(() => checkUpcomingAppointments(), 60000); // cada minuto
+
+
+  });
+
+  document.getElementById("auth-login-btn").addEventListener("click", async () => {
+    const email = document.getElementById("auth-email").value.trim();
+    const password = document.getElementById("auth-password").value;
+
+    const errorDiv = document.getElementById("auth-error");
+    errorDiv.textContent = "";
+
+    try {
+      await auth.signInWithEmailAndPassword(email, password);
+    } catch (err) {
+      errorDiv.textContent = "Correo o contraseña incorrectos.";
+      console.error("Login error:", err);
+    }
+  });
+
+  document.getElementById("logout-btn").addEventListener("click", async () => {
+    await auth.signOut();
+  });
+
+  // ============================
+  // NAVEGACIÓN ENTRE TABS
+  // ============================
+
   document.querySelectorAll(".nav-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       switchTab(btn.dataset.tab);
@@ -13,19 +105,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   });
-
-
-  // Inicialización general
-  renderClientsTable();
-  renderServicesTable();
-  renderInventoryTable();
-  renderClientsSelect();
-  renderServicesSelect();
-  renderAppointmentsTable();
-  renderCutsToday();
-  renderCutsHistory();
-  refreshAll();
-
 
   // ============================
   // FORMULARIO CLIENTES
@@ -66,9 +145,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("client-id").value = "";
   });
 
-  
-
-
   document.addEventListener("click", function(e) {
     if (e.target.classList.contains("edit-client-btn")) {
       const id = e.target.dataset.id;
@@ -82,21 +158,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  document.addEventListener("click", function(e) {
+  document.addEventListener("click", async function(e) {
     if (e.target.classList.contains("delete-client-btn")) {
       const id = e.target.dataset.id;
 
-      clients = clients.filter(c => c.id !== id);
-      saveToStorage("barber_app_clients", clients);
+      // 🔥 Eliminar en Firestore
+      await deleteClientFromFirestore(id);
 
+      // 🔥 Recargar lista desde Firestore
+      clients = await getClientsFromFirestore();
+
+      // 🔥 Volver a dibujar todo
       renderClientsTable();
-      renderDashboard(); // opcional si quieres actualizar el contador
+      renderDashboard();
     }
   });
-
-
-
-
 
   // ============================
   // FORMULARIO SERVICIOS
@@ -104,7 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const serviceForm = document.getElementById("service-form");
 
-  serviceForm.addEventListener("submit", e => {
+  serviceForm.addEventListener("submit", async e => {
     e.preventDefault();
 
     const id = document.getElementById("service-id").value || null;
@@ -115,11 +191,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!name || isNaN(duration) || isNaN(price)) return;
 
-    addOrUpdateService({ id, name, duration, price, active });
+    await addOrUpdateService({ id, name, duration, price, active });
 
     serviceForm.reset();
     document.getElementById("service-id").value = "";
 
+    services = await getServicesFromFirestore();
     renderServicesTable();
     renderServicesSelect();
     refreshAll();
@@ -130,7 +207,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("service-id").value = "";
   });
 
-  document.getElementById("services-table-body").addEventListener("click", e => {
+  document.getElementById("services-table-body").addEventListener("click", async e => {
     const btn = e.target;
     if (btn.tagName !== "BUTTON") return;
 
@@ -138,7 +215,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const action = btn.dataset.action;
 
     if (action === "edit") {
-      const service = services.find(s => s.id == id);
+      const service = services.find(s => s.id === id);
       if (!service) return;
 
       document.getElementById("service-id").value = service.id;
@@ -146,16 +223,16 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("service-duration").value = service.duration;
       document.getElementById("service-price").value = service.price;
       document.getElementById("service-active").checked = !!service.active;
+    }
 
-    } else if (action === "delete") {
-      deleteService(id);
+    else if (action === "delete") {
+      await deleteServiceFromFirestore(id);
+      services = await getServicesFromFirestore();
       renderServicesTable();
       renderServicesSelect();
       refreshAll();
     }
   });
-
-
 
   // ============================
   // FORMULARIO INVENTARIO
@@ -163,7 +240,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const inventoryForm = document.getElementById("inventory-form");
 
-  inventoryForm.addEventListener("submit", e => {
+  inventoryForm.addEventListener("submit", async e => {
     e.preventDefault();
 
     const id = document.getElementById("inventory-id").value || null;
@@ -174,13 +251,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!name || isNaN(qty) || isNaN(min) || isNaN(cost)) return;
 
-    addOrUpdateInventoryItem({ id, name, qty, min, cost });
+    await addOrUpdateInventoryItem({ id, name, qty, min, cost });
 
-    inventoryForm.reset();
-    document.getElementById("inventory-id").value = "";
+    inventory = await getInventoryFromFirestore();
 
     renderInventoryTable();
     refreshAll();
+
+    inventoryForm.reset();
+    document.getElementById("inventory-id").value = "";
   });
 
   document.getElementById("inventory-form-reset").addEventListener("click", () => {
@@ -188,7 +267,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("inventory-id").value = "";
   });
 
-  document.getElementById("inventory-table-body").addEventListener("click", e => {
+  document.getElementById("inventory-table-body").addEventListener("click", async e => {
     const btn = e.target;
     if (btn.tagName !== "BUTTON") return;
 
@@ -204,15 +283,15 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("inventory-qty").value = item.qty;
       document.getElementById("inventory-min").value = item.min;
       document.getElementById("inventory-cost").value = item.cost;
+    }
 
-    } else if (action === "delete") {
-      deleteInventoryItem(id);
+    else if (action === "delete") {
+      await deleteInventoryItemFromFirestore(id);
+      inventory = await getInventoryFromFirestore();
       renderInventoryTable();
       refreshAll();
     }
   });
-
-
 
   // ============================
   // FORMULARIO CITAS
@@ -220,7 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const appointmentForm = document.getElementById("appointment-form");
 
-  appointmentForm.addEventListener("submit", e => {
+  appointmentForm.addEventListener("submit", async e => {
     e.preventDefault();
 
     const id = document.getElementById("appointment-id").value || null;
@@ -233,12 +312,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!date || !time || !clientId || !serviceId || !barber) return;
 
-    addOrUpdateAppointment({ id, date, time, clientId, serviceId, barber, status });
+    await addOrUpdateAppointment({ id, date, time, clientId, serviceId, barber, status });
+
+    appointments = await getAppointmentsFromFirestore();
+
+    renderAppointmentsTable();
+    refreshAll();
 
     appointmentForm.reset();
     document.getElementById("appointment-id").value = "";
-
-    refreshAll();
   });
 
   document.getElementById("appointment-form-reset").addEventListener("click", () => {
@@ -246,7 +328,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("appointment-id").value = "";
   });
 
-  document.getElementById("appointments-table-body").addEventListener("click", e => {
+  document.getElementById("appointments-table-body").addEventListener("click", async e => {
     const btn = e.target;
     if (btn.tagName !== "BUTTON") return;
 
@@ -264,19 +346,56 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("appointment-service").value = app.serviceId;
       document.getElementById("appointment-barber").value = app.barber;
       document.getElementById("appointment-status").value = app.status;
+    }
 
-    } else if (action === "delete") {
-      deleteAppointment(id);
+    else if (action === "delete") {
+      await deleteAppointmentFromFirestore(id);
+      appointments = await getAppointmentsFromFirestore();
+      renderAppointmentsTable();
       refreshAll();
     }
   });
+
+  //Whats app
+
+  document.getElementById("appointments-table-body").addEventListener("click", e => {
+    if (!e.target.classList.contains("whatsapp-btn")) return;
+
+    const id = e.target.dataset.id;
+    const app = appointments.find(a => a.id === id);
+    if (!app) return;
+
+    const client = clients.find(c => c.id === app.clientId);
+    if (!client || !client.phone) {
+      alert("Este cliente no tiene número de teléfono registrado.");
+      return;
+    }
+
+    // Convertir fecha y hora a formato legible
+    const fecha = formatDateMMDDYYYY(app.date);
+    const hora = formatTimeTo12Hour(app.time);
+
+    // Mensaje prellenado
+    const mensaje = encodeURIComponent(
+      `Hola ${client.name}, te recordamos tu cita hoy a las ${hora}. ¡Te esperamos!`
+    );
+
+    // Número en formato internacional (asumiendo USA +1)
+    const telefono = client.phone.replace(/\D/g, ""); // limpiar caracteres
+    const whatsappURL = `https://wa.me/1${telefono}?text=${mensaje}`;
+
+    // Abrir WhatsApp
+    window.open(whatsappURL, "_blank");
+  });
+
+
+
+
 
   document.getElementById("appointments-filter-btn").addEventListener("click", () => {
     const date = document.getElementById("appointments-filter-date").value;
     renderAppointmentsTable(date || null);
   });
-
-
 
   // ============================
   // REPORTES
@@ -297,9 +416,6 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   });
 
-
-
-
   // ============================
   // CONFIGURACIÓN
   // ============================
@@ -316,23 +432,18 @@ document.addEventListener("DOMContentLoaded", () => {
     alert("Configuración guardada.");
   });
 
-
-
   // ============================
   // MODAL CORTE RÁPIDO
   // ============================
 
-  // Abrir modal
   document.getElementById("walkin-btn").addEventListener("click", () => {
     document.getElementById("walkin-modal").classList.remove("hidden");
   });
 
-  // Cerrar modal
   document.getElementById("walkin-close-btn").addEventListener("click", () => {
     document.getElementById("walkin-modal").classList.add("hidden");
   });
 
-  // Guardar corte
   document.getElementById("walkin-save-btn").addEventListener("click", () => {
 
     const clientId = document.getElementById("walkin-client").value || null;
@@ -343,7 +454,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const service = services.find(s => s.id == serviceId);
     const price = service ? service.price : 0;
 
-    const time = new Date().toTimeString().slice(0, 5); // HH:MM
+    const time = new Date().toTimeString().slice(0, 5);
 
     addWalkinCut({ clientId, serviceId, barber, time, price, notes });
 
@@ -352,8 +463,6 @@ document.addEventListener("DOMContentLoaded", () => {
     renderCutsToday();
     renderCutsHistory();
   });
-
-
 
   // ============================
   // SELECTS DEL MODAL DE CORTES
@@ -382,8 +491,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   fillWalkinSelects();
 
-
-
   // ============================
   // REFRESCOS AUTOMÁTICOS
   // ============================
@@ -399,25 +506,6 @@ document.addEventListener("DOMContentLoaded", () => {
   renderServicesTable();
 
 });
-
-
-
-// ============================
-// ACCESOS DIRECTOS DEL DASHBOARD
-// ============================
-
-document.getElementById("dashboard-new-appointment-btn")
-  .addEventListener("click", () => {
-    switchTab("appointments");
-  });
-
-document.querySelectorAll(".shortcut-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    switchTab(btn.dataset.tab);
-  });
-});
-
-
 
 // ============================
 // REFRESH GENERAL
@@ -436,13 +524,19 @@ function refreshAll() {
   renderReports();
 }
 
+// ============================
+// HISTORIAL DE CORTES
+// ============================
 
-document.getElementById("clear-cuts-history-btn").addEventListener("click", () => {
-  if (confirm("¿Borrar TODO el historial de cortes?")) {
-    clearCutsHistory();
-    renderCutsHistory();
-    renderCutsToday();
-  }
+document.getElementById("clear-cuts-history-btn").addEventListener("click", async () => {
+  if (!confirm("¿Borrar TODO el historial de cortes?")) return;
+
+  await clearWalkinCutsFirestore();
+  walkinCuts = await getWalkinCutsFromFirestore();
+
+  renderCutsHistory();
+  renderCutsToday();
+  renderDashboardIncome();
 });
 
 document.getElementById("cuts-history-table").addEventListener("click", e => {
@@ -454,36 +548,37 @@ document.getElementById("cuts-history-table").addEventListener("click", e => {
   }
 });
 
+document.addEventListener("click", async function(e) {
+  if (!e.target.classList.contains("delete-cut-btn")) return;
 
-document.addEventListener("click", function(e) {
-  if (e.target.classList.contains("delete-cut-btn")) {
-    const id = e.target.dataset.id;
-    const type = e.target.dataset.type;
+  const id = e.target.dataset.id;
+  const type = e.target.dataset.type;
 
-    if (type === "walkin") {
-      walkinCuts = walkinCuts.filter(c => c.id !== id);
-      saveToStorage("barber_app_walkin_cuts", walkinCuts);
-    }
-
-    if (type === "cita") {
-      appointments = appointments.map(a =>
-        a.id === id ? { ...a, status: "programada" } : a
-      );
-      saveToStorage("barber_app_appointments", appointments);
-    }
-
-    renderCutsHistory();
-    renderCutsToday();
-    renderDashboardIncome();
+  if (type === "walkin") {
+    await deleteWalkinCutFromFirestore(id);
+    walkinCuts = await getWalkinCutsFromFirestore();
   }
+
+  if (type === "cita") {
+    const app = appointments.find(a => a.id === id);
+    if (!app) return;
+
+    const updated = { ...app, status: "programada" };
+    await saveAppointmentToFirestore(updated);
+    appointments = await getAppointmentsFromFirestore();
+  }
+
+  renderCutsHistory();
+  renderCutsToday();
+  renderDashboardIncome();
 });
 
 
+// ============================
+// SERVICIOS POR DEFECTO
+// ============================
 
 const defaultServices = [
-  // ============================
-  // HOMBRES (36 servicios)
-  // ============================
   { id: 1, name: "Low Fade", duration: 30, price: 30, active: true },
   { id: 2, name: "Taper Fade", duration: 30, price: 30, active: true },
   { id: 3, name: "High Fade", duration: 30, price: 30, active: true },
@@ -508,8 +603,6 @@ const defaultServices = [
   { id: 22, name: "Classic Taper Fade", duration: 30, price: 30, active: true },
   { id: 23, name: "Skin Fade with Short Curls", duration: 40, price: 35, active: true },
   { id: 24, name: "Shadow Fade", duration: 30, price: 30, active: true },
-
-  // Nuevos (basados en tus fotos)
   { id: 25, name: "Razor Fade", duration: 40, price: 40, active: true },
   { id: 26, name: "Temple Fade", duration: 30, price: 30, active: true },
   { id: 27, name: "Mohawk Fade", duration: 40, price: 40, active: true },
@@ -522,10 +615,6 @@ const defaultServices = [
   { id: 34, name: "Fade con Diseño", duration: 45, price: 45, active: true },
   { id: 35, name: "Afro Shape Up", duration: 40, price: 40, active: true },
   { id: 36, name: "Waves + Shape Up", duration: 35, price: 35, active: true },
-
-  // ============================
-  // MUJERES (20 servicios)
-  // ============================
   { id: 37, name: "Corte de Mujer Largo", duration: 45, price: 45, active: true },
   { id: 38, name: "Corte de Mujer Medio", duration: 40, price: 40, active: true },
   { id: 39, name: "Corte de Mujer Corto", duration: 35, price: 35, active: true },
@@ -549,40 +638,20 @@ const defaultServices = [
   { id: 57, name: "Test1", duration: 15, price: 15, active: true }
 ];
 
-
-
-let services = JSON.parse(localStorage.getItem("barber_app_services") || "[]");
-
-// Mezclar defaultServices con los guardados
-defaultServices.forEach(def => {
-  const exists = services.some(s => s.id == def.id);
-  if (!exists) {
-    services.push(def); // agrega solo los nuevos
-  }
-});
-
-// Guardar mezcla final
-localStorage.setItem("barber_app_services", JSON.stringify(services));
-
-// Renderizar
 renderServicesSelect();
-renderServicesTable(); // ← NECESARIO
+renderServicesTable();
 
 
+// ============================
+// FOTOS DE SERVICIOS
+// ============================
 
 const servicePhotos = [
-  // Hombres (ejemplo)
   { name: "Foto1", url: "Man1.png" },
   { name: "Foto2", url: "Man2.png" },
   { name: "Foto3", url: "Man3.png" },
-
-  // Mujeres (ejemplo)
-  { name: "Foto4", url: "Woman1.png" },
- 
-
-  // Agrega aquí todas las fotos que quieras
+  { name: "Foto4", url: "Woman1.png" }
 ];
-
 
 function renderServicePhotos() {
   const container = document.getElementById("service-photos-container");
@@ -601,7 +670,6 @@ function renderServicePhotos() {
   });
 }
 
-
 function openPhotoModal(photo) {
   const modal = document.getElementById("photo-modal");
   const modalImg = document.getElementById("photo-modal-img");
@@ -613,7 +681,6 @@ function openPhotoModal(photo) {
   modal.style.display = "flex";
 }
 
-
 document.getElementById("photo-modal-close").addEventListener("click", () => {
   document.getElementById("photo-modal").style.display = "none";
 });
@@ -624,8 +691,13 @@ document.getElementById("photo-modal").addEventListener("click", (e) => {
   }
 });
 
+
+// ============================
+// FOTOS ANTES / DESPUÉS CLIENTES
+// ============================
+
 let currentPhotoClientId = null;
-let currentPhotoType = null; // "before" o "after"
+let currentPhotoType = null;
 
 document.addEventListener("click", e => {
   if (e.target.classList.contains("photo-before-btn")) {
@@ -651,15 +723,14 @@ function openClientPhotoModal(clientId, type) {
   document.getElementById("client-photo-modal").style.display = "flex";
 }
 
-
-document.getElementById("client-photo-save").addEventListener("click", () => {
+document.getElementById("client-photo-save").addEventListener("click", async () => {
   const fileInput = document.getElementById("client-photo-input");
   const file = fileInput.files[0];
 
   if (!file) return alert("Selecciona una foto primero.");
 
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = async function(e) {
     const base64 = e.target.result;
 
     const client = clients.find(c => c.id === currentPhotoClientId);
@@ -670,7 +741,9 @@ document.getElementById("client-photo-save").addEventListener("click", () => {
       client.photoAfter = base64;
     }
 
-    saveToStorage(STORAGE_KEYS.clients, clients);
+    await saveClientToFirestore(client);
+    clients = await getClientsFromFirestore();
+
     closeClientPhotoModal();
     renderClientsTable();
   };
@@ -678,9 +751,7 @@ document.getElementById("client-photo-save").addEventListener("click", () => {
   reader.readAsDataURL(file);
 });
 
-
-
-document.getElementById("client-photo-delete").addEventListener("click", () => {
+document.getElementById("client-photo-delete").addEventListener("click", async () => {
   const client = clients.find(c => c.id === currentPhotoClientId);
 
   if (currentPhotoType === "before") {
@@ -689,14 +760,65 @@ document.getElementById("client-photo-delete").addEventListener("click", () => {
     client.photoAfter = null;
   }
 
-  saveToStorage(STORAGE_KEYS.clients, clients);
+  await saveClientToFirestore(client);
+  clients = await getClientsFromFirestore();
+
   closeClientPhotoModal();
   renderClientsTable();
 });
-
 
 function closeClientPhotoModal() {
   document.getElementById("client-photo-modal").style.display = "none";
 }
 
 document.getElementById("client-photo-close").addEventListener("click", closeClientPhotoModal);
+
+
+// ============================
+// ACCESOS DIRECTOS DEL DASHBOARD
+// ============================
+
+document.getElementById("dashboard-new-appointment-btn")
+  .addEventListener("click", () => {
+    switchTab("appointments");
+  });
+
+document.querySelectorAll(".shortcut-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    switchTab(btn.dataset.tab);
+  });
+});
+
+function checkUpcomingAppointments() {
+  if (!appointments || !Array.isArray(appointments)) return;
+
+  const now = new Date();
+
+  appointments.forEach(app => {
+    if (app.status !== "programada") return;
+
+    const appDateTime = new Date(`${app.date}T${app.time}`);
+
+    // Diferencia en minutos
+    const diffMinutes = (appDateTime - now) / 60000;
+
+    // Si falta entre 59 y 61 minutos → enviar recordatorio
+    if (diffMinutes > 59 && diffMinutes < 61) {
+
+      const client = clients.find(c => c.id === app.clientId);
+      if (!client || !client.phone) return;
+
+      const hora = formatTimeTo12Hour(app.time);
+
+      const mensaje = encodeURIComponent(
+        `Hola ${client.name}, te recordamos tu cita hoy a las ${hora}. ¡Te esperamos!`
+      );
+
+      const telefono = client.phone.replace(/\D/g, "");
+      const whatsappURL = `https://wa.me/1${telefono}?text=${mensaje}`;
+
+      // Abrir WhatsApp automáticamente
+      window.open(whatsappURL, "_blank");
+    }
+  });
+}
