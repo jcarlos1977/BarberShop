@@ -28,18 +28,14 @@ function renderClientsTable(filterText = "") {
       <td>
         <button class="small edit-client-btn" data-id="${client.id}">Editar</button>
         <button class="small delete-client-btn" data-id="${client.id}">Eliminar</button>
-
-        <!-- ⭐ Botones de fotos -->
         <button class="small photo-before-btn" data-id="${client.id}">Antes</button>
         <button class="small photo-after-btn" data-id="${client.id}">Después</button>
       </td>
-
     `;
 
     tbody.appendChild(tr);
   });
 }
-
 
 document.getElementById("client-search").addEventListener("input", (e) => {
   renderClientsTable(e.target.value);
@@ -72,20 +68,17 @@ function renderServicesTable(filterText = "") {
       <td>$${service.price.toFixed(2)}</td>
       <td>${service.active ? "Sí" : "No"}</td>
       <td>
-        <button class="small" onclick="editService('${service.id}')">Editar</button>
-        <button class="small" onclick="deleteService('${service.id}')">Eliminar</button>
+        <button class="small" data-action="edit" data-id="${service.id}">Editar</button>
+        <button class="small" data-action="delete" data-id="${service.id}">Eliminar</button>
       </td>
     `;
     tbody.appendChild(tr);
   });
 }
 
-
-
 document.getElementById("service-search").addEventListener("input", (e) => {
   renderServicesTable(e.target.value);
 });
-
 
 function renderServicesSelect() {
   const select = document.getElementById("appointment-service");
@@ -128,11 +121,9 @@ function renderInventoryTable(filterText = "") {
   });
 }
 
-
 document.getElementById("inventory-search").addEventListener("input", (e) => {
   renderInventoryTable(e.target.value);
 });
-
 
 function renderAppointmentsTable(dateFilter = "", nameFilter = "") {
   const tbody = document.getElementById("appointments-table-body");
@@ -140,12 +131,10 @@ function renderAppointmentsTable(dateFilter = "", nameFilter = "") {
 
   let filtered = appointments;
 
-  // Filtro por fecha
   if (dateFilter) {
     filtered = filtered.filter(a => a.date === dateFilter);
   }
 
-  // Filtro por nombre del cliente
   if (nameFilter.trim() !== "") {
     filtered = filtered.filter(app => {
       const client = clients.find(c => c.id === app.clientId);
@@ -170,18 +159,18 @@ function renderAppointmentsTable(dateFilter = "", nameFilter = "") {
       <td>
         <button class="small" data-action="edit" data-id="${app.id}">Editar</button>
         <button class="small" data-action="delete" data-id="${app.id}">Eliminar</button>
+        <button class="small whatsapp-btn" data-id="${app.id}">WhatsApp</button>
       </td>
     `;
+
     tbody.appendChild(tr);
   });
 }
-
 
 document.getElementById("appointment-search").addEventListener("input", (e) => {
   const date = document.getElementById("appointments-filter-date").value;
   renderAppointmentsTable(date, e.target.value);
 });
-
 
 function renderDashboard() {
   const today = new Date().toLocaleDateString("en-CA");
@@ -243,10 +232,8 @@ function renderDashboard() {
       topServicesList.appendChild(li);
     });
 
-  // ⭐ AQUI VA
-  renderDashboardIncome();  
+  renderDashboardIncome();
 }
-
 
 function renderDashboardIncome() {
   const div = document.getElementById("dashboard-income-today");
@@ -258,7 +245,6 @@ function renderDashboardIncome() {
     Walk-ins: ${r.walkinCount} ($${r.walkinTotal.toFixed(2)})
   `;
 }
-
 
 function formatTimeTo12Hour(time24) {
   let [hour, minute] = time24.split(":");
@@ -276,8 +262,6 @@ function formatDateMMDDYYYY(dateStr) {
   return `${mm}-${dd}-${yyyy}`;
 }
 
-
-
 function refreshQuickAlerts() {
   const quickAlerts = document.getElementById("dashboard-quick-alerts");
   quickAlerts.innerHTML = "";
@@ -293,10 +277,8 @@ function refreshQuickAlerts() {
     const client = clients.find(c => c.id === a.clientId);
     const li = document.createElement("li");
     li.textContent = `Cita retrasada: ${formatTimeTo12Hour(a.time)} - Cliente ${client.name} (${formatDateMMDDYYYY(a.date)})`;
-
     quickAlerts.appendChild(li);
   });
-
 }
 
 function refreshNewClientsToday() {
@@ -320,7 +302,7 @@ function populateAppointmentServicesSelect() {
 
   services.forEach(service => {
     const opt = document.createElement("option");
-    opt.value = service.id;          // 👈 IMPORTANTE
+    opt.value = service.id;
     opt.textContent = service.name;
     select.appendChild(opt);
   });
