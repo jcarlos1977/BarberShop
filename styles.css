@@ -772,13 +772,13 @@ table {
 
 
 .login-input {
-  width: 20%;
+  width: 40%;
   padding: 10px;
   margin: 10px 0;
 }
 
 .primary-btn, .secondary-btn {
-  width: 10%;
+  width: 20%;
   padding: 10px;
   margin-top: 10px;
 }
