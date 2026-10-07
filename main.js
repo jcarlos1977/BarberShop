@@ -352,6 +352,8 @@ document.addEventListener("DOMContentLoaded", () => {
     await addOrUpdateAppointment({ id, date, time, clientId, serviceId, barber, status });
 
     appointments = await getAppointmentsFromFirestore();
+    showAvailableSlots(date);
+
 
     renderAppointmentsTable();
     refreshAll();
@@ -887,4 +889,109 @@ function checkUpcomingAppointments() {
       window.open(whatsappURL, "_blank");
     }
   });
+}
+
+// Functions para detectar dates and times available for appointments
+
+document.getElementById("appointment-date").addEventListener("change", () => {
+  const date = document.getElementById("appointment-date").value;
+  if (!date) return;
+  showAvailableSlots(date);
+});
+
+function toMinutes(timeStr) {
+  const [h, m] = timeStr.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function getAppointmentsForDay(dateStr) {
+  return appointments
+    .filter(a => a.date === dateStr)
+    .sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
+}
+
+
+function showAvailableSlots(dateStr) {
+  const slotsDiv = document.getElementById("appointment-slots");
+  slotsDiv.innerHTML = "";
+
+  // Horario configurado
+  const startTime = document.getElementById("settings-start-time").value;
+  const endTime = document.getElementById("settings-end-time").value;
+
+  if (!startTime || !endTime) {
+    slotsDiv.textContent = "Configura tu horario primero.";
+    slotsDiv.style.color = "red";
+    return;
+  }
+
+  const start = toMinutes(startTime);
+  const end = toMinutes(endTime);
+
+  // Citas del día
+  const dayApps = getAppointmentsForDay(dateStr);
+
+  // Construir lista de intervalos ocupados
+  const busy = dayApps.map(app => {
+    const service = services.find(s => s.id === app.serviceId);
+    const duration = service ? Number(service.duration) : 0;
+    const appStart = toMinutes(app.time);
+    const appEnd = appStart + duration;
+    return { start: appStart, end: appEnd };
+  });
+
+  // Buscar huecos
+  let freeSlots = [];
+  let cursor = start;
+
+  busy.forEach(b => {
+    if (cursor < b.start) {
+      freeSlots.push({ start: cursor, end: b.start });
+    }
+    cursor = Math.max(cursor, b.end);
+  });
+
+  // Último hueco del día
+  if (cursor < end) {
+    freeSlots.push({ start: cursor, end: end });
+  }
+
+  // Mostrar huecos
+  if (freeSlots.length === 0) {
+    slotsDiv.textContent = "Día lleno — no queda tiempo disponible.";
+    slotsDiv.style.color = "red";
+    return;
+  }
+
+  slotsDiv.style.color = "green";
+  slotsDiv.innerHTML = "Huecos disponibles:<br>";
+
+  freeSlots.forEach(slot => {
+      const slotMinutes = slot.end - slot.start;
+
+      const sH = String(Math.floor(slot.start / 60)).padStart(2, "0");
+      const sM = String(slot.start % 60).padStart(2, "0");
+      const eH = String(Math.floor(slot.end / 60)).padStart(2, "0");
+      const eM = String(slot.end % 60).padStart(2, "0");
+
+      const label = `${sH}:${sM} – ${eH}:${eM} · Minutos disponibles: ${slotMinutes}`;
+
+      // ============================
+      // REGLAS DE NEGOCIO
+      // ============================
+
+      if (slotMinutes < 20) {
+          // Hueco demasiado pequeño
+          slotsDiv.innerHTML += `<span style="color:red;">• ${label} (No hay cupo)</span><br>`;
+      }
+      else if (slotMinutes >= 20 && slotMinutes < 30) {
+          // Hueco ajustado
+          slotsDiv.innerHTML += `<span style="color:#cc0000;">• ${label} (Disponible pero ajustado)</span><br>`;
+      }
+      else {
+          // Hueco normal
+          slotsDiv.innerHTML += `• ${label}<br>`;
+      }
+  });
+
 }
