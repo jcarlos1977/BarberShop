@@ -285,9 +285,10 @@ function refreshQuickAlerts() {
   getLateAppointments().forEach(a => {
     const client = clients.find(c => c.id === a.clientId);
     const li = document.createElement("li");
-    li.textContent = `Cita retrasada: ${formatTimeTo12Hour(a.time)} - Cliente ${client.name} (${formatDateMMDDYYYY(a.date)})`;
+    li.textContent = `Cita retrasada: ${formatTimeTo12Hour(a.time)} - Cliente ${client?.name || "Desconocido"} (${formatDateMMDDYYYY(a.date)})`;
     quickAlerts.appendChild(li);
   });
+
 }
 
 function refreshNewClientsToday() {
