@@ -5,7 +5,7 @@
 
 body {
   margin: 0;
-  background: #f4f4f7;
+  background: #e4e4fd;
   color: #222;
 }
 
@@ -738,19 +738,22 @@ table {
   z-index: 19999; /* encima de todo */
 }
 
+
 .login-container {
-  width: 100%;
+  width: 50%;
   max-width: 100%;
   padding: 20px;
   border-radius: 10px;
   background: #ffffff;
   box-shadow: 0 0 10px rgba(0,0,0,0.3);
   text-align: center;
+  
 }
 
 
+
 .login-input {
-  width: 50%;
+  width: 20%;
   padding: 10px;
   margin: 10px 0;
 }
@@ -767,5 +770,38 @@ table {
 }
 
 
+
+/* Hacer que aparezca el usuario login*/
+
+.app-header {
+  padding: 10px 20px;
+  display: flex;
+  flex-direction: column;   /* 🔥 dos líneas */
+  gap: 10px;                /* separación entre líneas */
+}
+
+/* Cada fila del header */
+.header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Primera línea */
+.top-row h1 {
+  margin: 0;
+}
+
+.user-name-display {
+  font-weight: bold;
+  font-size: 16px;
+  color: #00c72b;
+}
+
+/* Segunda línea */
+.bottom-row {
+  display: flex;
+  gap: 20px;
+}
 
 
