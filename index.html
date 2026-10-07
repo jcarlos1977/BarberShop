@@ -14,10 +14,19 @@
   <div id="auth-screen" class="login-container">
     <h2>Iniciar sesión</h2>
 
+    
+    <div>
     <input id="auth-email" class="login-input" type="email" placeholder="Correo">
+    </div>
+    
+    <div>
     <input id="auth-password" class="login-input" type="password" placeholder="Contraseña">
+    </div>
 
+    <div>
     <button id="auth-login-btn" class="primary-btn">Entrar</button>
+    </div>
+    
 
     <div id="auth-error" class="login-error"></div>
   </div>
@@ -61,15 +70,24 @@
 
 
   <header class="app-header">
-    
 
-    <h1>Panel de Gestión - Estética / Barbería</h1>
-    <div class="header-summary">
+    <!-- Primera línea -->
+    <div class="header-row top-row">
+      <h1>Panel de Gestión - Estética / Barbería</h1>
+      <span id="logged-user-name" class="user-name-display"></span>
+    </div>
+
+    <!-- Segunda línea -->
+    <div class="header-row bottom-row">
       <span id="summary-today-appointments">Citas hoy: 0</span>
       <span id="summary-today-income">Ingresos estimados: $0.00</span>
       <span id="summary-clients-count">Clientes registrados: 0</span>
     </div>
+
   </header>
+
+
+
 
   <nav class="app-nav">
     <button data-tab="dashboard" class="nav-btn active">Dashboard</button>
