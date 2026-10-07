@@ -138,6 +138,25 @@ table {
   font-size: 0.85rem;
 }
 
+table th, table td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  vertical-align: middle;
+}
+
+td.actions-cell {
+  text-align: right;
+}
+
+td.actions-cell button {
+  margin-left: 5px;
+}
+
+td.photo-cell {
+  text-align: right;
+}
+
+
 th, td {
   border: 1px solid #e5e7eb;
   padding: 6px 8px;
