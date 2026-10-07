@@ -97,27 +97,40 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
   document.getElementById("auth-login-btn").addEventListener("click", async () => {
-      const email = document.getElementById("auth-email").value.trim();
-      const password = document.getElementById("auth-password").value;
+    const loginInput = document.getElementById("auth-email").value.trim().toLowerCase();
+    const password = document.getElementById("auth-password").value;
 
-      const errorDiv = document.getElementById("auth-error");
-      errorDiv.textContent = "";
+    const errorDiv = document.getElementById("auth-error");
+    errorDiv.textContent = "";
 
-      try {
-        await auth.signInWithEmailAndPassword(email, password);
+    try {
+      let emailToUse = loginInput;
 
-        // ⭐ Mostrar nombre del usuario en el header
-        const user = auth.currentUser;
-        if (user) {
-          const name = user.email.split("@")[0]; // solo el nombre antes del @
-          document.getElementById("logged-user-name").textContent = name;
-        }
+      // Buscar si lo que escribió es username
+      const usersRef = db.collection("users");
+      const query = await usersRef.where("username", "==", loginInput).get();
 
-      } catch (err) {
-        errorDiv.textContent = "Correo o contraseña incorrectos.";
-        console.error("Login error:", err);
+      if (!query.empty) {
+        emailToUse = query.docs[0].data().email;
       }
+
+      // Login
+      await auth.signInWithEmailAndPassword(emailToUse, password);
+
+      // Obtener username real
+      const userDoc = await db.collection("users").doc(auth.currentUser.uid).get();
+      const userData = userDoc.data();
+      const username = userData.username;
+
+      document.getElementById("logged-user-name").textContent = username;
+
+    } catch (err) {
+      errorDiv.textContent = "Usuario o contraseña incorrectos.";
+      console.error("Login error:", err);
+    }
   });
+
+
 
   
 
@@ -560,20 +573,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 
-auth.onAuthStateChanged(user => {
-    if (user) {
-      // Usuario está logueado
-      const name = user.email.split("@")[0];
-      document.getElementById("logged-user-name").textContent = name;
+auth.onAuthStateChanged(async user => {
+  if (user) {
 
-      // Ocultar pantalla de login si está visible
-      document.getElementById("auth-screen").style.display = "none";
-    } else {
-      // Usuario NO está logueado
-      document.getElementById("logged-user-name").textContent = "";
-      document.getElementById("auth-screen").style.display = "flex";
-    }
-  });
+    // Leer Firestore SIEMPRE
+    const userDoc = await db.collection("users").doc(user.uid).get();
+    const data = userDoc.data();
+
+    // Si existe username, úsalo; si no, usa el email
+    const username = data?.username || user.email.split("@")[0];
+
+    document.getElementById("logged-user-name").textContent = username;
+
+    // Ocultar pantalla de login
+    document.getElementById("auth-screen").style.display = "none";
+
+  } else {
+
+    document.getElementById("logged-user-name").textContent = "";
+    document.getElementById("auth-screen").style.display = "flex";
+
+  }
+});
+
   
 // ============================
 // REFRESH GENERAL
