@@ -25,13 +25,22 @@ function renderClientsTable(filterText = "") {
       <td>${client.phone}</td>
       <td>${client.vip ? "Sí" : "No"}</td>
       
-      <td>
+      <td class="actions-cell">
         <button class="small edit-client-btn" data-id="${client.id}">Editar</button>
         <button class="small delete-client-btn" data-id="${client.id}">Eliminar</button>
+        
+      </td>
+
+      <td class="photo-cell">
         <button class="small photo-before-btn" data-id="${client.id}">Antes</button>
+      </td>
+
+      <td class="photo-cell">
         <button class="small photo-after-btn" data-id="${client.id}">Después</button>
       </td>
+
     `;
+
 
     tbody.appendChild(tr);
   });
