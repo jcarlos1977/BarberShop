@@ -21,6 +21,30 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("auth-screen").style.display = "none";
     document.getElementById("app-screen").style.display = "block";
 
+    // ⭐ Mostrar nombre del usuario
+    const name = user.email.split("@")[0];
+    document.getElementById("logged-user-name").textContent = name;
+
+    // ============================
+    // ⭐ Cargar configuración del usuario
+    // ============================
+    try {
+      const settingsDoc = await db
+        .collection("users")
+        .doc(user.uid)
+        .collection("settings")
+        .doc("workHours")
+        .get();
+
+      if (settingsDoc.exists) {
+        const settings = settingsDoc.data();
+        document.getElementById("settings-start-time").value = settings.startTime || "";
+        document.getElementById("settings-end-time").value = settings.endTime || "";
+      }
+    } catch (err) {
+      console.error("Error cargando configuración:", err);
+    }
+
     // ============================
     // 🔥 ORDEN CORRECTO DE CARGA
     // ============================
@@ -69,8 +93,8 @@ document.addEventListener("DOMContentLoaded", () => {
     setInterval(() => refreshNewClientsToday(), 1000);
     setInterval(() => checkUpcomingAppointments(), 60000); // cada minuto
 
-
   });
+
 
   document.getElementById("auth-login-btn").addEventListener("click", async () => {
       const email = document.getElementById("auth-email").value.trim();
@@ -436,14 +460,28 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("settings-start-time").value = settings.startTime || "";
   document.getElementById("settings-end-time").value = settings.endTime || "";
 
-  document.getElementById("settings-save-btn").addEventListener("click", () => {
+  document.getElementById("settings-save-btn").addEventListener("click", async () => {
     const startTime = document.getElementById("settings-start-time").value;
     const endTime = document.getElementById("settings-end-time").value;
 
-    updateSettings({ startTime, endTime });
+    const user = auth.currentUser;
+    if (!user) {
+      alert("Debes iniciar sesión para guardar configuración.");
+      return;
+    }
+
+    await db.collection("users")
+            .doc(user.uid)
+            .collection("settings")
+            .doc("workHours")
+            .set({
+              startTime,
+              endTime
+            });
 
     alert("Configuración guardada.");
   });
+
 
   // ============================
   // MODAL CORTE RÁPIDO
