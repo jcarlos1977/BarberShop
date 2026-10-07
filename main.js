@@ -73,19 +73,32 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("auth-login-btn").addEventListener("click", async () => {
-    const email = document.getElementById("auth-email").value.trim();
-    const password = document.getElementById("auth-password").value;
+      const email = document.getElementById("auth-email").value.trim();
+      const password = document.getElementById("auth-password").value;
 
-    const errorDiv = document.getElementById("auth-error");
-    errorDiv.textContent = "";
+      const errorDiv = document.getElementById("auth-error");
+      errorDiv.textContent = "";
 
-    try {
-      await auth.signInWithEmailAndPassword(email, password);
-    } catch (err) {
-      errorDiv.textContent = "Correo o contraseña incorrectos.";
-      console.error("Login error:", err);
-    }
+      try {
+        await auth.signInWithEmailAndPassword(email, password);
+
+        // ⭐ Mostrar nombre del usuario en el header
+        const user = auth.currentUser;
+        if (user) {
+          const name = user.email.split("@")[0]; // solo el nombre antes del @
+          document.getElementById("logged-user-name").textContent = name;
+        }
+
+      } catch (err) {
+        errorDiv.textContent = "Correo o contraseña incorrectos.";
+        console.error("Login error:", err);
+      }
   });
+
+  
+
+
+
 
   document.getElementById("logout-btn").addEventListener("click", async () => {
     await auth.signOut();
@@ -507,6 +520,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 
+auth.onAuthStateChanged(user => {
+    if (user) {
+      // Usuario está logueado
+      const name = user.email.split("@")[0];
+      document.getElementById("logged-user-name").textContent = name;
+
+      // Ocultar pantalla de login si está visible
+      document.getElementById("auth-screen").style.display = "none";
+    } else {
+      // Usuario NO está logueado
+      document.getElementById("logged-user-name").textContent = "";
+      document.getElementById("auth-screen").style.display = "flex";
+    }
+  });
+  
 // ============================
 // REFRESH GENERAL
 // ============================
