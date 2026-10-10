@@ -2,39 +2,29 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Estética / Barbería - Gestión</title>
+  <title>Finanzas Personales - Dashboard</title>
   <link rel="stylesheet" href="styles.css" />
-
-  
-
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+  
 
 
-  <div id="auth-screen" class="login-container">
-    <h2>Iniciar sesión</h2>
 
-    
-    <div>
-    <input id="auth-email" class="login-input" type="email" placeholder="Correo">
+  <button id="logoutBtn" class="logout-btn">Cerrar sesión</button>
+
+  <header class="app-header">
+    <h1>Dashboard de Finanzas Personales</h1>
+    <div class="month-selector">
+      <label for="monthSelect">Mes actual:</label>
+      <input type="month" id="monthSelect" />
+      <label for="startingBalance">Saldo inicial del mes:</label>
+      <input type="number" id="startingBalance" placeholder="0.00" />
+      <button id="applyMonth">Aplicar</button>
     </div>
-    
-    <div>
-    <input id="auth-password" class="login-input" type="password" placeholder="Contraseña">
-    </div>
+  </header>
 
-    <div>
-    <button id="auth-login-btn" class="primary-btn">Entrar</button>
-    </div>
-    
-
-    <div id="auth-error" class="login-error"></div>
-  </div>
-
-  <div id="app-screen" style="display:none;">
-    <!-- Aquí va toda tu aplicación -->
-    <button id="logout-btn" class="secondary-btn">Cerrar sesión</button>
-  </div>
 
 
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -43,18 +33,20 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
   <!-- Firebase Auth (compat) con versión 10.7.1 -->
- <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+
 
   <script>
     
     const firebaseConfig = {
-      apiKey: "AIzaSyBcWtL3B5aNVpEV0ahXSaP3pK00lEbb6rM",
-      authDomain: "restauranteapp-ad17d.firebaseapp.com",
-      databaseURL: "https://restauranteapp-ad17d-default-rtdb.firebaseio.com",
-      projectId: "restauranteapp-ad17d",
-      storageBucket: "restauranteapp-ad17d.firebasestorage.app",
-      messagingSenderId: "132764157748",
-      appId: "1:132764157748:web:5bd87f5caeca177381c761"
+      apiKey: "AIzaSyBWCqLTIo-V6DhgHtocW7JvonHc4u0qOV8",
+      authDomain: "jcsanchez1977-85c2a.firebaseapp.com",
+      databaseURL: "https://jcsanchez1977-85c2a-default-rtdb.firebaseio.com",
+      projectId: "jcsanchez1977-85c2a",
+      storageBucket: "jcsanchez1977-85c2a.firebasestorage.app",
+      messagingSenderId: "785731000539",
+      appId: "1:785731000539:web:2d928cfe80bc1994eb54fe",
+      measurementId: "G-6Y5P0ZNSJK"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -65,529 +57,375 @@
     
 
   </script>
-  
-  
-
-
-  <header class="app-header">
-
-    <!-- Primera línea -->
-    <div class="header-row top-row">
-      <h1>Panel de Gestión - Estética / Barbería</h1>
-      <span id="logged-user-name" class="user-name-display"></span>
-    </div>
-
-    <!-- Segunda línea -->
-    <div class="header-row bottom-row">
-      <span id="summary-today-appointments">Citas hoy: 0</span>
-      <span id="summary-today-income">Ingresos estimados: $0.00</span>
-      <span id="summary-clients-count">Clientes registrados: 0</span>
-    </div>
-
-  </header>
-
-
-
-
-  <nav class="app-nav">
-    <button data-tab="dashboard" class="nav-btn active">Dashboard</button>
-    <button data-tab="clients" class="nav-btn">Clientes</button>
-    <button data-tab="appointments" class="nav-btn">Citas</button>
-    <button data-tab="services" class="nav-btn">Servicios</button>
-    <button data-tab="inventory" class="nav-btn">Inventario</button>
-    <button data-tab="cuts" class="nav-btn">Cortes</button>
-    <button data-tab="reports" class="nav-btn">Reportes</button>
-    <button data-tab="settings" class="nav-btn">Configuración</button>
-    <button data-tab="service-photos" class="nav-btn">Fotos de Servicios</button>
-  </nav>
 
   <main class="app-main">
 
-    <!-- DASHBOARD -->
-    <section id="tab-dashboard" class="tab-section active">
-      <h2>Resumen del día</h2>
+    <!-- 🔥 HEADER FIJO DEL RESUMEN GENERAL -->
+    <section class="summary-header">
+      <h2>Resumen general</h2>
 
-      <div class="dashboard-actions">
-        <button id="dashboard-new-appointment-btn" class="primary-btn">
-          + Nueva cita
-        </button>
-
-        <!-- ✔ BOTÓN DE CORTE RÁPIDO SOLO AQUÍ -->
-        <button id="walkin-btn" class="primary-btn">
-          + Corte rápido
-        </button>
-
-        <div class="business-income">
-          <h3>Ingreso del día</h3>
-          <div id="dashboard-income-today"></div>
-        </div>
-
-      </div>
-
-      
-
-      <div class="dashboard-extra">
+      <div class="dashboard-cards">
         <div class="card">
-          <h3>Alertas rápidas</h3>
-          <ul id="dashboard-quick-alerts"></ul>
+          <h3>Saldo actual</h3>
+          <p id="currentBalance">$0.00</p>
         </div>
-
         <div class="card">
-          <h3>Clientes nuevos hoy</h3>
-          <ul id="dashboard-new-clients-list"></ul>
+          <h3>Total gastos semanales</h3>
+          <p id="weeklyTotal">$0.00</p>
         </div>
-      </div>
-
-      <div class="dashboard-grid">
         <div class="card">
-          <h3>Citas de hoy</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Hora</th>
-                <th>Cliente</th>
-                <th>Servicio</th>
-                <th>Barbero</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody id="dashboard-today-appointments-body"></tbody>
-          </table>
+          <h3>Total gastos mensuales</h3>
+          <p id="monthlyTotal">$0.00</p>
         </div>
-
         <div class="card">
-          <h3>Alertas</h3>
-          <ul id="dashboard-alerts-list"></ul>
+          <h3>Total ingresos</h3>
+          <p id="incomeTotal">$0.00</p>
         </div>
-
         <div class="card">
-          <h3>Servicios más vendidos (últimos 30 días)</h3>
-          <ul id="dashboard-top-services-list"></ul>
+          <h3>Ahorro estimado fin de mes</h3>
+          <p id="estimatedSavings">$0.00</p>
         </div>
       </div>
     </section>
 
-    <!-- CLIENTES -->
-    <section id="tab-clients" class="tab-section">
-      <h2>Gestión de clientes</h2>
-      <div class="two-columns">
-        <form id="client-form" class="card">
-          <h3>Nuevo / Editar cliente</h3>
-          <input type="hidden" id="client-id" />
-
-          <label>Nombre completo</label>
-          <input type="text" id="client-name" required />
-
-          <label>Teléfono</label>
-          <input type="tel" id="client-phone" required />
-
-          <label>Notas / preferencias</label>
-          <textarea id="client-notes"></textarea>
-
-          <label>Cliente VIP</label>
-          <input type="checkbox" id="client-vip" />
-
-          <div class="form-actions">
-            <button type="submit">Guardar cliente</button>
-            <button type="button" id="client-form-reset">Resetear</button>
-          </div>
-        </form>
-
-        <div class="card">
-          <h3>Listado de clientes</h3>
-
-          <!-- ⭐ Campo de búsqueda -->
-          <input 
-            type="text" 
-            id="client-search" 
-            placeholder="Buscar cliente por nombre..." 
-            style="width: 100%; padding: 8px; margin-bottom: 10px;"
-          >
-
-          <table>
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Teléfono</th>
-                <th>VIP</th>
-                <th>Acciones</th>
-                <th>Fotos Antes</th>
-                <th>Fotos Despues</th>
-              </tr>
-            </thead>
-            <tbody id="clients-table-body"></tbody>
-          </table>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- CITAS -->
-    <section id="tab-appointments" class="tab-section">
-      <h2>Agenda y citas</h2>
-      <div class="two-columns">
-        <form id="appointment-form" class="card">
-          <h3>Nueva cita</h3>
-          <input type="hidden" id="appointment-id" />
-
-          <label>Fecha</label>
-          <input type="date" id="appointment-date" required />
-          <div id="appointment-slots" style="margin-top: 10px; font-weight: bold;"></div>
-
-
-
-          <label>Hora</label>
-          <input type="time" id="appointment-time" required />
-
-          <label>Cliente</label>
-          <select id="appointment-client" required></select>
-
-          <label>Servicio</label>
-          <select id="appointment-service" required></select>
-
-          <label>Barbero / Estilista</label>
-          <input type="text" id="appointment-barber" value="Jose" required />
-
-
-          <label>Estado</label>
-          <select id="appointment-status">
-            <option value="programada">Programada</option>
-            <option value="completada">Completada</option>
-            <option value="cancelada">Cancelada</option>
-          </select>
-
-          <div class="form-actions">
-            <button type="submit">Guardar cita</button>
-            <button type="button" id="appointment-form-reset">Nueva</button>
-          </div>
-        </form>
-
-        <div class="card">
-          <h3>Citas por fecha</h3>
-          <label>Fecha</label>
-          <input type="date" id="appointments-filter-date" />
-          <button id="appointments-filter-btn">Filtrar</button>
-
-          <input 
-            type="text" 
-            id="appointment-search" 
-            placeholder="Buscar por nombre del cliente..." 
-            style="width: 100%; padding: 8px; margin: 10px 0;"
-          >
-
-
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Hora</th>
-                <th>Cliente</th>
-                <th>Servicio</th>
-                <th>Barbero</th>
-                <th>Estado</th>
-                <th>Total</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="appointments-table-body"></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- CORTES -->
-    <section id="tab-cuts" class="tab-section">
-      <h2>Registro de cortes</h2>
-
-      <!-- ❌ BOTÓN ELIMINADO DE AQUÍ -->
-
-      <div class="card">
-        <h3>Cortes del día</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Hora</th>
-              <th>Cliente</th>
-              <th>Servicio</th>
-              <th>Barbero</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody id="cuts-today-table"></tbody>
-        </table>
-      </div>
-
-      <div class="card">
-
-        <button id="clear-cuts-history-btn" class="primary-btn">Borrar historial completo</button>
-        
-
-
-        <h3>Historial de cortes</h3>
-        <label>Fecha</label>
-        <input type="date" id="cuts-filter-date" />
-        <button id="cuts-filter-btn">Filtrar</button>
-
-        <input 
-          type="text" 
-          id="cuts-search" 
-          placeholder="Buscar por nombre del cliente..." 
-          style="width: 100%; padding: 8px; margin: 10px 0;"
-        >
-
-
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Hora</th>
-              <th>Cliente</th>
-              <th>Servicio</th>
-              <th>Barbero</th>
-              <th>Total</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="cuts-history-table"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- MODAL CORTE RÁPIDO -->
-    <div id="walkin-modal" class="modal hidden">
-      <div class="modal-content">
-        <h3>Registrar corte rápido</h3>
-
-        <label>Cliente (opcional)</label>
-        <select id="walkin-client">
-          <option value="">Walk-in (sin registro)</option>
-        </select>
-
-        <label>Servicio</label>
-        <select id="walkin-service"></select>
-
-        <label>Barbero</label>
-        <input type="text" id="walkin-barber">
-
-        <label>Notas</label>
-        <input type="text" id="walkin-notes">
-
-        <button id="walkin-save-btn">Guardar corte</button>
-        <button id="walkin-close-btn">Cerrar</button>
-      </div>
+    <!-- 🔥 TABS DE NAVEGACIÓN -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tab-dashboard">Dashboard</button>
+      <button class="tab-btn" data-tab="tab-weekly">Gastos semanales</button>
+      <button class="tab-btn" data-tab="tab-monthly">Gastos mensuales</button>
+      <button class="tab-btn" data-tab="tab-income">Ingresos</button>
     </div>
 
-    <!-- SERVICIOS -->
-    <section id="tab-services" class="tab-section">
-      <h2>Servicios y precios</h2>
-      <div class="two-columns">
-        <form id="service-form" class="card">
-          <h3>Nuevo / Editar servicio</h3>
-          <input type="hidden" id="service-id" />
+    <!-- 🔥 CONTENIDO DE CADA TAB -->
 
-          <label>Nombre del servicio</label>
-          <input type="text" id="service-name" required />
-
-          <label>Duración (minutos)</label>
-          <input type="number" id="service-duration" min="5" step="5" required />
-
-          <label>Precio base</label>
-          <input type="number" id="service-price" min="0" step="0.01" required />
-
-          <label>Activo</label>
-          <input type="checkbox" id="service-active" checked />
-
-          <div class="form-actions">
-            <button type="submit">Guardar servicio</button>
-            <button type="button" id="service-form-reset">Nuevo</button>
-          </div>
-        </form>
-
-        <div class="card">
-          <h3>Listado de servicios</h3>
-
-          <input 
-            type="text" 
-            id="service-search" 
-            placeholder="Buscar servicio por nombre..." 
-            style="width: 100%; padding: 8px; margin-bottom: 10px;"
-          >
-
-          <table>
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Duración</th>
-                <th>Precio</th>
-                <th>Activo</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="services-table-body"></tbody>
-          </table>
+    <!-- TAB DASHBOARD -->
+    <section id="tab-dashboard" class="tab-content active">
+      <div class="charts-container">
+        <div class="chart-box">
+          <h3>Gastos vs Ingresos</h3>
+          <canvas id="mainChart"></canvas>
         </div>
 
-      </div>
-    </section>
-
-    <!-- INVENTARIO -->
-    <section id="tab-inventory" class="tab-section">
-      <h2>Inventario</h2>
-      <div class="two-columns">
-        <form id="inventory-form" class="card">
-          <h3>Nuevo / Editar producto</h3>
-          <input type="hidden" id="inventory-id" />
-
-          <label>Nombre del producto</label>
-          <input type="text" id="inventory-name" required />
-
-          <label>Cantidad en stock</label>
-          <input type="number" id="inventory-qty" min="0" required />
-
-          <label>Stock mínimo</label>
-          <input type="number" id="inventory-min" min="0" required />
-
-          <label>Costo unitario</label>
-          <input type="number" id="inventory-cost" min="0" step="0.01" required />
-
-          <div class="form-actions">
-            <button type="submit">Guardar producto</button>
-            <button type="button" id="inventory-form-reset">Nuevo</button>
-          </div>
-        </form>
-
-        <div class="card">
-          <h3>Listado de inventario</h3>
-
-          <input 
-            type="text" 
-            id="inventory-search" 
-            placeholder="Buscar producto..." 
-            style="width: 100%; padding: 8px; margin-bottom: 10px;"
-          >
-
-          <table>
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th>Cantidad</th>
-                <th>Mínimo</th>
-                <th>Costo</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="inventory-table-body"></tbody>
-          </table>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- REPORTES -->
-    <section id="tab-reports" class="tab-section">
-      <h2>Reportes y estadísticas</h2>
-      <div class="reports-grid">
-        <div class="card">
-          <h3>Ingresos por rango de fechas</h3>
-          <label>Desde</label>
-          <input type="date" id="report-from-date" />
-          <label>Hasta</label>
-          <input type="date" id="report-to-date" />
-          <button id="report-generate-btn">Generar</button>
-          <div id="report-income-summary"></div>
-        </div>
-
-        <div class="card">
-          <h3>Servicios más vendidos</h3>
-          <ul id="report-top-services-list"></ul>
-        </div>
-
-        <div class="card">
-          <h3>Clientes frecuentes</h3>
-          <ul id="report-top-clients-list"></ul>
+        <div class="chart-box">
+          <h3>Detalle por tipo</h3>
+          <canvas id="detailChart"></canvas>
         </div>
       </div>
     </section>
 
-    <!-- CONFIGURACIÓN -->
-    <section id="tab-settings" class="tab-section">
-      <h2>Configuración del sistema</h2>
-      <div class="card">
-        <h3>Horarios de trabajo</h3>
-        <label>Hora inicio</label>
-        <input type="time" id="settings-start-time" />
-        <label>Hora fin</label>
-        <input type="time" id="settings-end-time" />
-        <button id="settings-save-btn">Guardar configuración</button>
+    <!-- TAB GASTOS SEMANALES -->
+    <section id="tab-weekly" class="tab-content">
+      <div class="table-header">
+        <h3>Gastos semanales</h3>
+
+        <button id="openWeeklyPopupBtn" class="action-btn action-edit">
+          ➕ Configurar gasto semanal
+        </button>
+
+        <button id="resetWeeklyBtn" class="action-btn action-delete">
+          🔄 Reset semanal
+        </button>
+
+        <button id="addNewWeeklyType" class="action-btn action-edit">
+          ➕ Nuevo tipo semanal
+        </button>
+
+        <!-- 🔥 NUEVO -->
+        <button id="addAllWeeklyDefaults" class="action-btn action-edit">
+          ➕ Agregar todos los gastos fijos semanales
+        </button>
+      </div>
+
+
+
+        <table id="weeklyTable">
+          <thead>
+            <tr>
+              <th data-column="date">Fecha <span class="sort-arrow"></span></th>
+              <th data-column="type">Tipo <span class="sort-arrow"></span></th>
+              <th data-column="value">Valor <span class="sort-arrow"></span></th>
+              <th data-column="status">Estado <span class="sort-arrow"></span></th>
+
+              <th>Editar</th>
+              <th>Eliminar</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
     </section>
-    
-    <section id="tab-service-photos" class="tab-section">
-      <h2>Fotos de Servicios</h2>
-      <div id="service-photos-container" class="photos-grid"></div>
+
+    <!-- TAB GASTOS MENSUALES -->
+    <section id="tab-monthly" class="tab-content">
+      <div class="table-block">
+        <div class="table-header">
+          <h3>Gastos mensuales</h3>
+
+          <button id="addMonthlyRow">Agregar gasto mensual</button>
+
+          <button id="addAllMonthlyDefaults" class="action-btn action-edit">
+            ➕ Agregar todos los gastos fijos
+          </button>
+
+          <button id="resetMonthly" class="action-btn action-delete">
+            🔄 Reset mensual
+          </button>
+
+          <button id="addNewMonthlyType" class="action-btn action-edit">
+            ➕ Nuevo tipo de gasto
+          </button>
+        </div>
+
+
+
+
+        <table id="monthlyTable">
+          <thead>
+            <tr>
+              <th data-column="date">Fecha <span class="sort-arrow"></span></th>
+              <th data-column="type">Tipo de gasto <span class="sort-arrow"></span></th>
+              <th data-column="value">Valor ($) <span class="sort-arrow"></span></th>
+              <th data-column="status">Estado <span class="sort-arrow"></span></th>
+              <th>Editar</th>
+              <th>Eliminar</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+      </div>
     </section>
 
+    <!-- TAB INGRESOS -->
+    <section id="tab-income" class="tab-content">
+      <div class="table-header">
+        <h3>Ingresos</h3>
 
+        <button id="openIncomePopupBtn" class="action-btn action-edit">
+          ➕ Configurar ingreso
+        </button>
 
+        <button id="addAllIncomeDefaults" class="action-btn action-edit">
+          ➕ Agregar todos los ingresos fijos
+        </button>
+
+        <button id="resetIncomeBtn" class="action-btn action-delete">
+          🔄 Reset ingresos
+        </button>
+
+        <button id="addNewIncomeType" class="action-btn action-edit">
+          ➕ Nuevo tipo de ingreso
+        </button>
+
+      </div>
+
+      <!-- 🔥 ESTA TABLA FALTABA -->
+      <table id="incomeTable">
+        <thead>
+          <tr>
+            <th data-column="date">Fecha <span class="sort-arrow"></span></th>
+            <th data-column="type">Descripción <span class="sort-arrow"></span></th>
+            <th data-column="value">Valor ($) <span class="sort-arrow"></span></th>
+            <th data-column="status">Estado <span class="sort-arrow"></span></th>
+            <th>Editar</th>
+            <th>Eliminar</th>
+          </tr>
+        </thead>
+        <tbody id="incomeTableBody"></tbody>
+      </table>
+
+    </section>
 
 
   </main>
 
-  <footer class="app-footer">
-    <span>Estética / Barbería - Sistema de gestión local (localStorage)</span>
-  </footer>
-  
-  <!-- ⭐ MODAL DE FOTOS (PÉGALO AQUÍ) -->
-  <div id="photo-modal" class="photo-modal">
-    <span id="photo-modal-close" class="photo-modal-close">&times;</span>
-    <img id="photo-modal-img" class="photo-modal-img">
-    <p id="photo-modal-name" class="photo-modal-name"></p>
-  </div>
 
+  <!-- Popup para configurar gasto semanal -->
+  <div id="weeklyPopup" class="modal hidden">
+    <div class="modal-content">
+      <h3>Configurar gasto semanal</h3>
 
-  <div id="client-photo-modal" class="photo-modal">
-    <div class="photo-modal-content">
+      <label for="popupTypeSelect">Gasto:</label>
+      <select id="popupTypeSelect">
+        <option value="Market">Market</option>
+        <option value="Gasoline">Gasoline</option>
+        <option value="Costco">Costco</option>
+        <option value="Fidelity">Fidelity</option>
+        <option value="JR&Maria Saving">JR&Maria Saving</option>
+      </select>
 
-      <span id="client-photo-close" class="photo-modal-close">&times;</span>
+      <label for="popupStartDate">Fecha de inicio:</label>
+      <input type="date" id="popupStartDate" />
 
-      <h3 id="client-photo-title" class="photo-modal-title"></h3>
+      <!-- 🔥 NUEVO CAMPO -->
+      <label for="popupValue">Valor ($):</label>
+      <input type="number" id="popupValue" min="0" step="0.01" placeholder="0.00" />
 
-      <div class="photo-preview-container">
-        <img id="client-photo-img" class="photo-modal-img">
+      <p class="small-text">
+        Se generarán filas semanales dentro del mes seleccionado, según el día de inicio.
+      </p>
+
+      <div class="modal-actions">
+        <button id="popupCancel" class="btn-danger">Cancelar</button>
+
+        <button id="addWeeklyTypeBtn" class="btn-secondary">
+          ➕ Agregar otro gasto semanal
+        </button>
       </div>
-
-      <div class="photo-actions">
-        <input type="file" id="client-photo-input" accept="image/*" class="photo-input">
-
-        <button id="client-photo-save" class="photo-btn save-btn">Guardar foto</button>
-        <button id="client-photo-delete" class="photo-btn delete-btn">Eliminar foto</button>
-      </div>
-
     </div>
   </div>
 
 
-  
-  <script src="storage.js"></script>
-  <script src="models.js"></script>
-  <script src="logic.js"></script>
-  <script src="ui.js"></script>
+  <div id="monthlyPopup" class="modal hidden">
+    <div class="modal-content">
+      <h3>Agregar gasto mensual</h3>
 
-  <!-- Firestore modules -->
-  <script src="dbClients.js"></script>
-  <script src="dbServices.js"></script>
-  <script src="dbAppointments.js"></script>
-  <script src="dbInventory.js"></script>
-  <script src="dbCuts.js"></script>
+      <label for="monthlyTypeSelect">Tipo de gasto:</label>
+      <select id="monthlyTypeSelect">
+        <option value="Home Rent" data-value="2500" data-date="2026-10-01">Home Rent</option>
+        <option value="Car Payment" data-value="600" data-date="2026-10-05">Car Payment</option>
+        <option value="Internet" data-value="80" data-date="2026-10-10">Internet</option>
+        <option value="Phone Bill" data-value="60" data-date="2026-10-12">Phone Bill</option>
+        <option value="Insurance" data-value="150" data-date="2026-10-15">Insurance</option>
+      </select>
+
+
+      <label for="monthlyDate">Fecha:</label>
+      <input type="date" id="monthlyDate" />
+
+      <label for="monthlyValue">Valor ($):</label>
+      <input type="number" id="monthlyValue" min="0" step="0.01" placeholder="0.00" />
+
+      <div class="modal-actions">
+        <button id="monthlyCancel" class="btn-danger">Cancelar</button>
+        <button id="monthlyAddBtn" class="btn-secondary">➕ Agregar gasto mensual</button>
+      </div>
+    </div>
+  </div>
+
   
-  <!-- Main app -->
+  <div id="newMonthlyTypePopup" class="modal hidden">
+    <div class="modal-content">
+      <h3>Agregar nuevo tipo de gasto</h3>
+
+      <label>Nombre del gasto:</label>
+      <input type="text" id="newTypeName" placeholder="Ej: Electricity" />
+
+      <label>Valor ($):</label>
+      <input type="number" id="newTypeValue" placeholder="0.00" />
+
+      <label>Fecha predeterminada:</label>
+      <input type="date" id="newTypeDate" />
+
+      <div class="modal-actions">
+        <button id="newTypeCancel" class="btn-danger">Cancelar</button>
+        <button id="newTypeAddBtn" class="btn-secondary">➕ Agregar tipo</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="newWeeklyTypePopup" class="modal hidden">
+    <div class="modal-content">
+      <h3>Agregar nuevo tipo semanal</h3>
+
+      <label>Nombre del gasto:</label>
+      <input type="text" id="newWeeklyTypeName" placeholder="Ej: Laundry" />
+
+      <label>Valor ($):</label>
+      <input type="number" id="newWeeklyTypeValue" placeholder="0.00" />
+
+      <label>Fecha inicial:</label>
+      <input type="date" id="newWeeklyTypeDate" />
+
+      <div class="modal-actions">
+        <button id="newWeeklyTypeCancel" class="btn-danger">Cancelar</button>
+        <button id="newWeeklyTypeAddBtn" class="btn-secondary">➕ Agregar tipo</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="incomePopup" class="modal hidden">
+    <div class="modal-content">
+      <h3>Configurar ingreso</h3>
+
+      <label for="incomeTypeSelect">Tipo de ingreso:</label>
+      <select id="incomeTypeSelect">
+        <option value="Salary" data-value="3000" data-date="2026-10-01">Salary</option>
+        <option value="Bonus" data-value="500" data-date="2026-10-15">Bonus</option>
+        <option value="Freelance" data-value="800" data-date="2026-10-20">Freelance</option>
+        <option value="Investment" data-value="200" data-date="2026-10-10">Investment</option>
+      </select>
+
+      <label for="incomeDate">Fecha:</label>
+      <input type="date" id="incomeDate" />
+
+      <label for="incomeValue">Valor ($):</label>
+      <input type="number" id="incomeValue" min="0" step="0.01" placeholder="0.00" />
+
+      <div class="modal-actions">
+        <button id="incomeCancel" class="btn-danger">Cancelar</button>
+        <button id="incomeAddBtn" class="btn-secondary">➕ Agregar ingreso</button>
+      </div>
+    </div>
+  </div>
+
+ 
+
+  <div id="newIncomeTypePopup" class="popup hidden">
+    <div class="popup-content">
+      <h3>Nuevo tipo de ingreso</h3>
+
+      <label>Nombre del tipo:</label>
+      <input type="text" id="newIncomeTypeName" placeholder="Ej: Uber, Bonus, etc">
+
+      <label>Valor predeterminado ($):</label>
+      <input type="number" id="newIncomeTypeValue" placeholder="Ej: 100">
+
+      <label>Fecha predeterminada:</label>
+      <input type="date" id="newIncomeTypeDate">
+
+      <div class="popup-actions">
+        <button id="saveNewIncomeType" class="action-btn action-edit">➕ Agregar tipo</button>
+        <button id="closeNewIncomeTypePopup" class="action-btn action-delete">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="loginOverlay" class="login-overlay hidden"></div>
+
+  <div id="loginPopup" class="login-popup hidden">
+    <h2>Iniciar sesión</h2>
+
+    <input id="loginEmail" type="email" placeholder="Email">
+    <input id="loginPassword" type="password" placeholder="Password">
+
+    <button id="loginBtn">Entrar</button>
+    <button id="registerBtn">Crear cuenta</button>
+  </div>
+
+  
+  
+
+
+
+
+
+
+
+  <footer class="app-footer">
+    <p>Versión demo - Datos guardados en localStorage (luego se migrará a Firestore).</p>
+  </footer>
+
   <script src="main.js"></script>
+  <script src="weekly.js"></script>
+  <script src="monthly.js"></script>
+  <script src="incomes.js"></script>
+  <script src="dashboard.js"></script>
 
   
 
+  <div id="loadingOverlay" class="hidden">Procesando...</div>
   
-  
-
 </body>
 </html>
