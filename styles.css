@@ -221,6 +221,8 @@ button.small {
   font-size: 0.9rem;
 }
 
+
+
 .business-status {
   display: flex;
   align-items: center;
@@ -823,4 +825,88 @@ table {
   gap: 20px;
 }
 
+
+/*-------------------------------------Calendario*/
+.calendar-content {
+  width: 600px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-top: 20px;
+}
+
+
+
+.calendar-close-btn {
+  background: #e74c3c;
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  float: right;
+}
+
+.calendar-close-btn:hover {
+  background: #c0392b;
+}
+
+.calendar-day {
+  padding: 10px;
+  background: #f5f5f5;
+  border-radius: 6px;
+  text-align: center;
+  cursor: pointer;
+  border: 1px solid #ddd;
+}
+
+
+.calendar-day:hover {
+  background: #e8e8e8;
+}
+
+.calendar-day-has-appointments {
+  background: #3498db;
+  color: #fff;
+  border-color: #2980b9;
+}
+
+.calendar-day-has-appointments small {
+  color: #ecf0f1;
+}
+
+
+.calendar-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /*background: rgba(240, 240, 240, 0.4);*/
+  display: none;
+  z-index: 99999;
+  pointer-events: none; /* 🔥 permite tocar fuera */
+}
+
+.calendar-modal-content {
+  position: absolute;        /* 🔥 necesario para mover */
+  top: 120px;
+  left: 120px;
+  background: rgb(80, 58, 58);
+  padding: 20px;
+  border-radius: 8px;
+  width: 600px;
+  pointer-events: auto;      /* 🔥 permite clics dentro */
+  color: #000f64;
+}
+
+.modal-header {
+  width: 100%;
+  cursor: move;
+  margin-bottom: 10px;
+}
 
