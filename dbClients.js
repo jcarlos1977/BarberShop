@@ -20,6 +20,8 @@ async function getClientsFromFirestore() {
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
+window.getClients = getClientsFromFirestore;
+
 // ============================
 // CREAR / ACTUALIZAR CLIENTE
 // ============================
