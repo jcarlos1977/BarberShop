@@ -140,10 +140,12 @@ function renderAppointmentsTable(dateFilter = "", nameFilter = "") {
 
   let filtered = appointments;
 
+  // Filtro por fecha
   if (dateFilter) {
     filtered = filtered.filter(a => a.date === dateFilter);
   }
 
+  // Filtro por nombre del cliente
   if (nameFilter.trim() !== "") {
     filtered = filtered.filter(app => {
       const client = clients.find(c => c.id === app.clientId);
@@ -154,7 +156,12 @@ function renderAppointmentsTable(dateFilter = "", nameFilter = "") {
   filtered.forEach(app => {
     const client = clients.find(c => c.id === app.clientId);
     const service = services.find(s => s.id == app.serviceId);
-    const total = service ? service.price : 0;
+
+    // ⭐ PRECIO FINAL (personalizado o normal)
+    const finalPrice = 
+      app.price !== undefined && app.price !== null
+        ? app.price
+        : (service ? service.price : 0);
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -164,7 +171,10 @@ function renderAppointmentsTable(dateFilter = "", nameFilter = "") {
       <td>${service ? service.name : "—"}</td>
       <td>${app.barber}</td>
       <td>${app.status}</td>
-      <td>$${total.toFixed(2)}</td>
+
+      <!-- ⭐ Mostrar precio final -->
+      <td>$${finalPrice.toFixed(2)}</td>
+
       <td>
         <button class="small" data-action="edit" data-id="${app.id}">Editar</button>
         <button class="small" data-action="delete" data-id="${app.id}">Eliminar</button>
@@ -175,6 +185,7 @@ function renderAppointmentsTable(dateFilter = "", nameFilter = "") {
     tbody.appendChild(tr);
   });
 }
+
 
 document.getElementById("appointment-search").addEventListener("input", (e) => {
   const date = document.getElementById("appointments-filter-date").value;
@@ -191,10 +202,18 @@ function renderDashboard() {
 
   summaryAppointments.textContent = `Citas hoy: ${todayAppointments.length}`;
 
+  // ⭐ INGRESOS REALES (precio personalizado o normal)
   const totalIncome = todayAppointments.reduce((sum, app) => {
     const service = services.find(s => s.id == app.serviceId);
-    return sum + (service ? service.price : 0);
+
+    const finalPrice =
+      app.price !== undefined && app.price !== null
+        ? app.price
+        : (service ? service.price : 0);
+
+    return sum + finalPrice;
   }, 0);
+
   summaryIncome.textContent = `Ingresos estimados: $${totalIncome.toFixed(2)}`;
   summaryClients.textContent = `Clientes registrados: ${clients.length}`;
 
@@ -243,6 +262,7 @@ function renderDashboard() {
 
   renderDashboardIncome();
 }
+
 
 function renderDashboardIncome() {
   const div = document.getElementById("dashboard-income-today");
@@ -328,3 +348,245 @@ function editService(id) {
   document.getElementById("service-price").value = s.price;
   document.getElementById("service-active").checked = s.active;
 }
+
+async function renderCalendar() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+
+  const calendarTitle = document.getElementById("calendar-title");
+  const calendarGrid = document.getElementById("calendar-grid");
+
+  calendarTitle.textContent = `${now.toLocaleString("es-MX", { month: "long" })} ${year}`;
+  calendarGrid.innerHTML = "";
+
+  // 🔥 FIX: ahora sí es un arreglo
+  const appointments = await getAppointments();
+
+  const grouped = {};
+  appointments.forEach(a => {
+    const d = a.date;
+    if (!grouped[d]) grouped[d] = [];
+    grouped[d].push(a);
+  });
+
+  for (let day = 1; day <= lastDay.getDate(); day++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const count = grouped[dateStr]?.length || 0;
+
+    const div = document.createElement("div");
+    div.className = "calendar-day";
+
+    // ⭐ Si el día tiene citas, resaltarlo
+    if (count > 0) {
+      div.classList.add("calendar-day-has-appointments");
+    }
+
+    // ⭐ Mostrar solo si hay citas
+    let label = `<strong>${day}</strong>`;
+    if (count > 0) {
+      label += `<br><small>${count} citas</small>`;
+    }
+
+    div.innerHTML = label;
+
+    div.addEventListener("click", () => openDayDetails(dateStr));
+
+    calendarGrid.appendChild(div);
+  }
+}
+
+
+
+
+async function openDayDetails(dateStr) {
+  // 🔥 Cerrar el calendario al abrir detalles
+  document.getElementById("calendar-modal").style.display = "none";
+
+  const modal = document.getElementById("day-details-modal");
+  const title = document.getElementById("day-title");
+  const list = document.getElementById("day-appointments");
+  const availability = document.getElementById("day-availability");
+
+  // Abrir modal de detalles
+  modal.style.display = "block";
+  title.textContent = `Citas del ${formatDateMMDDYYYY(dateStr)}`;
+
+  // Obtener citas del día
+  const appointments = (await getAppointments()).filter(a => a.date === dateStr);
+  const clients = await getClients();
+
+  list.innerHTML = "";
+
+  appointments.forEach(a => {
+    const client = clients.find(c => c.id === a.clientId);
+    const div = document.createElement("div");
+    div.innerHTML = `
+      <strong>${formatTimeTo12Hour(a.time)}</strong> - 
+      ${client?.name || "Cliente desconocido"} - 
+      ${a.serviceName || "Servicio"}
+    `;
+    list.appendChild(div);
+  });
+
+  const freeSlots = calculateAvailability(appointments);
+  availability.innerHTML = freeSlots.map(s => `<div>${s}</div>`).join("");
+}
+
+
+
+document.getElementById("close-day-details").addEventListener("click", () => {
+  // Cerrar modal de detalles
+  document.getElementById("day-details-modal").style.display = "none";
+
+  // Volver a abrir calendario
+  document.getElementById("calendar-modal").style.display = "block";
+
+  // Recargar calendario como siempre
+  renderCalendar();
+});
+
+
+function calculateAvailability(appointments, serviceDuration = 30) {
+  // 🔥 Leer horarios reales desde Firestore
+  const [startH, startM] = workStartTime.split(":").map(Number);
+  const [endH, endM] = workEndTime.split(":").map(Number);
+
+  const start = startH * 60 + startM;
+  const end = endH * 60 + endM;
+
+  // Convertir citas a intervalos ocupados
+  const busy = appointments.map(a => {
+    const service = services.find(s => s.id === a.serviceId);
+    const duration = service ? Number(service.duration) : 0;
+
+    const [h, m] = a.time.split(":").map(Number);
+    const appStart = h * 60 + m;
+    const appEnd = appStart + duration;
+
+    return { start: appStart, end: appEnd };
+  });
+
+  busy.sort((a, b) => a.start - b.start);
+
+  const freeSlots = [];
+  let cursor = start;
+
+  busy.forEach(b => {
+    if (cursor < b.start) {
+      const gapStart = cursor;
+      const gapEnd = b.start;
+      const gapMinutes = gapEnd - gapStart;
+
+      freeSlots.push({
+        start: gapStart,
+        end: gapEnd,
+        minutes: gapMinutes,
+        fits: gapMinutes >= serviceDuration,
+        adjusted: gapMinutes >= serviceDuration && gapMinutes < serviceDuration + 10
+      });
+    }
+    cursor = Math.max(cursor, b.end);
+  });
+
+  if (cursor < end) {
+    const gapStart = cursor;
+    const gapEnd = end;
+    const gapMinutes = gapEnd - gapStart;
+
+    freeSlots.push({
+      start: gapStart,
+      end: gapEnd,
+      minutes: gapMinutes,
+      fits: gapMinutes >= serviceDuration,
+      adjusted: gapMinutes >= serviceDuration && gapMinutes < serviceDuration + 10
+    });
+  }
+
+  return freeSlots.map(slot => {
+    const sH = String(Math.floor(slot.start / 60)).padStart(2, "0");
+    const sM = String(slot.start % 60).padStart(2, "0");
+    const eH = String(Math.floor(slot.end / 60)).padStart(2, "0");
+    const eM = String(slot.end % 60).padStart(2, "0");
+
+    const label = `${formatTimeTo12Hour(`${sH}:${sM}`)} – ${formatTimeTo12Hour(`${eH}:${eM}`)} (${slot.minutes} min)`;
+
+    if (!slot.fits) {
+      return `<div style="color:gray">${label} — No disponible</div>`;
+    }
+
+    if (slot.adjusted) {
+      return `<div style="color:red">${label} — Disponible (ajustado)</div>`;
+    }
+
+    return `<div style="color:green">${label} — Disponible</div>`;
+  });
+}
+
+
+
+function makeCalendarModalsDraggable(mainModalId, detailModalId, headerId) {
+  const mainModal = document.getElementById(mainModalId);
+  const detailModal = document.getElementById(detailModalId);
+  const header = document.getElementById(headerId);
+
+  if (!mainModal || !detailModal || !header) return;
+
+  const mainContent = mainModal.querySelector(".calendar-modal-content");
+  const detailContent = detailModal.querySelector(".calendar-modal-content");
+
+  let offsetX = 0;
+  let offsetY = 0;
+  let isDragging = false;
+
+  header.style.cursor = "move";
+
+  function startDrag(e) {
+    if (e.target.classList.contains("calendar-close-btn")) return;
+
+    const rect = mainContent.getBoundingClientRect();
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+    offsetX = clientX - rect.left;
+    offsetY = clientY - rect.top;
+
+    isDragging = true;
+  }
+
+  function duringDrag(e) {
+    if (!isDragging) return;
+
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+    const newLeft = clientX - offsetX;
+    const newTop = clientY - offsetY;
+
+    // mover contenido principal
+    mainContent.style.left = `${newLeft}px`;
+    mainContent.style.top = `${newTop}px`;
+
+    // si el otro modal está abierto, moverlo también
+    if (detailModal.style.display === "block") {
+      detailContent.style.left = `${newLeft + 40}px`;
+      detailContent.style.top = `${newTop + 40}px`;
+    }
+  }
+
+  function stopDrag() {
+    isDragging = false;
+  }
+
+  header.addEventListener("mousedown", startDrag);
+  document.addEventListener("mousemove", duringDrag);
+  document.addEventListener("mouseup", stopDrag);
+
+  header.addEventListener("touchstart", startDrag);
+  document.addEventListener("touchmove", duringDrag, { passive: false });
+  document.addEventListener("touchend", stopDrag);
+}
+
