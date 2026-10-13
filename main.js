@@ -21,9 +21,18 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("auth-screen").style.display = "none";
     document.getElementById("app-screen").style.display = "block";
 
-    // ⭐ Mostrar nombre del usuario
-    const name = user.email.split("@")[0];
-    document.getElementById("logged-user-name").textContent = name;
+    // ⭐ Mostrar nombre del usuario (fallback)
+    const fallbackName = user.email.split("@")[0];
+    document.getElementById("logged-user-name").textContent = fallbackName;
+
+    // ⭐ Recuperar username guardado en login
+    const loggedUserName = localStorage.getItem("loggedUserName") || fallbackName;
+
+    // ⭐ Asignar barbero en citas
+    document.getElementById("appointment-barber").value = loggedUserName.toUpperCase();
+
+    // ⭐ Asignar barbero en walk-in
+    document.getElementById("walkin-barber").value = loggedUserName.toUpperCase();
 
     // ============================
     // ⭐ Cargar configuración del usuario
@@ -38,6 +47,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (settingsDoc.exists) {
         const settings = settingsDoc.data();
+        window.workStartTime = settings.startTime;
+        window.workEndTime = settings.endTime;
         document.getElementById("settings-start-time").value = settings.startTime || "";
         document.getElementById("settings-end-time").value = settings.endTime || "";
       }
@@ -49,31 +60,23 @@ document.addEventListener("DOMContentLoaded", () => {
     // 🔥 ORDEN CORRECTO DE CARGA
     // ============================
 
-    // 1️⃣ Clientes
     clients = await getClientsFromFirestore();
     renderClientsTable();
     renderClientsSelect();
 
-    // 2️⃣ Servicios (primero cargar defaults si no existen)
     await loadDefaultServicesIntoFirestore();
     services = await getServicesFromFirestore();
     renderServicesTable();
     renderServicesSelect();
 
-    // 3️⃣ Citas
     appointments = await getAppointmentsFromFirestore();
     renderAppointmentsTable();
 
-    // 4️⃣ Inventario
     inventory = await getInventoryFromFirestore();
     renderInventoryTable();
 
-    // 5️⃣ Walk-in Cuts
     walkinCuts = await getWalkinCutsFromFirestore();
 
-    // ============================
-    // 🔥 Renderizar todo
-    // ============================
     renderCutsToday();
     renderCutsHistory();
 
@@ -81,20 +84,17 @@ document.addEventListener("DOMContentLoaded", () => {
     renderReports();
     refreshAll();
 
-    // ============================
-    // SELECTS DEL MODAL WALK-IN
-    // ============================
     fillWalkinSelects();
 
-    // ============================
-    // REFRESCOS AUTOMÁTICOS
-    // ============================
     setInterval(() => refreshQuickAlerts(), 1000);
     setInterval(() => refreshNewClientsToday(), 1000);
-    setInterval(() => checkUpcomingAppointments(), 60000); // cada minuto
+    setInterval(() => checkUpcomingAppointments(), 60000);
 
   });
 
+  // ============================
+  // LOGIN
+  // ============================
 
   document.getElementById("auth-login-btn").addEventListener("click", async () => {
     const loginInput = document.getElementById("auth-email").value.trim().toLowerCase();
@@ -106,7 +106,6 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       let emailToUse = loginInput;
 
-      // Buscar si lo que escribió es username
       const usersRef = db.collection("users");
       const query = await usersRef.where("username", "==", loginInput).get();
 
@@ -114,7 +113,6 @@ document.addEventListener("DOMContentLoaded", () => {
         emailToUse = query.docs[0].data().email;
       }
 
-      // Login
       await auth.signInWithEmailAndPassword(emailToUse, password);
 
       // Obtener username real
@@ -122,7 +120,16 @@ document.addEventListener("DOMContentLoaded", () => {
       const userData = userDoc.data();
       const username = userData.username;
 
+      // Mostrar en el header
       document.getElementById("logged-user-name").textContent = username;
+
+      // 🔥 Guardarlo para usarlo en toda la app
+      localStorage.setItem("loggedUserName", username);
+
+      // ⭐ Actualizar barbero en tiempo real sin refresh
+      document.getElementById("appointment-barber").value = username.toUpperCase();
+      document.getElementById("walkin-barber").value = username.toUpperCase();
+
 
     } catch (err) {
       errorDiv.textContent = "Usuario o contraseña incorrectos.";
@@ -130,12 +137,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-
-
-  
-
-
-
+  // ============================
+  // LOGOUT
+  // ============================
 
   document.getElementById("logout-btn").addEventListener("click", async () => {
     await auth.signOut();
@@ -212,13 +216,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.target.classList.contains("delete-client-btn")) {
       const id = e.target.dataset.id;
 
-      // 🔥 Eliminar en Firestore
       await deleteClientFromFirestore(id);
 
-      // 🔥 Recargar lista desde Firestore
       clients = await getClientsFromFirestore();
 
-      // 🔥 Volver a dibujar todo
       renderClientsTable();
       renderDashboard();
     }
@@ -360,13 +361,29 @@ document.addEventListener("DOMContentLoaded", () => {
     const barber = document.getElementById("appointment-barber").value.trim();
     const status = document.getElementById("appointment-status").value;
 
+    // 🔥 Precio personalizado o normal
+    let price = parseFloat(document.getElementById("appointment-price-custom").value);
+    if (isNaN(price)) {
+      const service = services.find(s => s.id == serviceId);
+      price = service ? service.price : 0;
+    }
+
+
     if (!date || !time || !clientId || !serviceId || !barber) return;
 
-    await addOrUpdateAppointment({ id, date, time, clientId, serviceId, barber, status });
+    await addOrUpdateAppointment({
+      id,
+      date,
+      time,
+      clientId,
+      serviceId,
+      barber,
+      status,
+      price   // 🔥 AHORA SÍ SE GUARDA EN FIRESTORE
+    });
 
     appointments = await getAppointmentsFromFirestore();
     showAvailableSlots(date);
-
 
     renderAppointmentsTable();
     refreshAll();
@@ -374,6 +391,7 @@ document.addEventListener("DOMContentLoaded", () => {
     appointmentForm.reset();
     document.getElementById("appointment-id").value = "";
   });
+
 
   document.getElementById("appointment-form-reset").addEventListener("click", () => {
     appointmentForm.reset();
@@ -398,7 +416,12 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("appointment-service").value = app.serviceId;
       document.getElementById("appointment-barber").value = app.barber;
       document.getElementById("appointment-status").value = app.status;
+
+      // ⭐ ESTA LÍNEA ES LA QUE FALTABA
+      document.getElementById("appointment-price-custom").value =
+        app.price !== undefined && app.price !== null ? app.price : "";
     }
+
 
     else if (action === "delete") {
       await deleteAppointmentFromFirestore(id);
@@ -408,7 +431,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  //Whats app
+  // ============================
+  // WHATSAPP
+  // ============================
 
   document.getElementById("appointments-table-body").addEventListener("click", e => {
     if (!e.target.classList.contains("whatsapp-btn")) return;
@@ -423,26 +448,22 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // Convertir fecha y hora a formato legible
     const fecha = formatDateMMDDYYYY(app.date);
     const hora = formatTimeTo12Hour(app.time);
 
-    // Mensaje prellenado
     const mensaje = encodeURIComponent(
       `Hola ${client.name}, te recordamos tu cita hoy a las ${hora}. ¡Te esperamos!`
     );
 
-    // Número en formato internacional (asumiendo USA +1)
-    const telefono = client.phone.replace(/\D/g, ""); // limpiar caracteres
+    const telefono = client.phone.replace(/\D/g, "");
     const whatsappURL = `https://wa.me/1${telefono}?text=${mensaje}`;
 
-    // Abrir WhatsApp
     window.open(whatsappURL, "_blank");
   });
 
-
-
-
+  // ============================
+  // FILTRO DE CITAS
+  // ============================
 
   document.getElementById("appointments-filter-btn").addEventListener("click", () => {
     const date = document.getElementById("appointments-filter-date").value;
@@ -472,9 +493,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // CONFIGURACIÓN
   // ============================
 
-  document.getElementById("settings-start-time").value = settings.startTime || "";
-  document.getElementById("settings-end-time").value = settings.endTime || "";
-
   document.getElementById("settings-save-btn").addEventListener("click", async () => {
     const startTime = document.getElementById("settings-start-time").value;
     const endTime = document.getElementById("settings-end-time").value;
@@ -497,7 +515,6 @@ document.addEventListener("DOMContentLoaded", () => {
     alert("Configuración guardada.");
   });
 
-
   // ============================
   // MODAL CORTE RÁPIDO
   // ============================
@@ -518,17 +535,26 @@ document.addEventListener("DOMContentLoaded", () => {
     const notes = document.getElementById("walkin-notes").value.trim();
 
     const service = services.find(s => s.id == serviceId);
-    const price = service ? service.price : 0;
+
+    // ⭐ PRECIO PERSONALIZADO O NORMAL
+    const price = parseFloat(document.getElementById("walkin-price-custom").value) ||
+                  (service ? service.price : 0);
 
     const time = new Date().toTimeString().slice(0, 5);
+    const date = new Date().toLocaleDateString("en-CA");
 
-    addWalkinCut({ clientId, serviceId, barber, time, price, notes });
+    addWalkinCut({ clientId, serviceId, barber, time, date, price, notes });
 
     document.getElementById("walkin-modal").classList.add("hidden");
 
     renderCutsToday();
     renderCutsHistory();
   });
+
+
+  // ============================
+  // SELECTS DEL MODAL DE CORTES
+  // ============================
 
   // ============================
   // SELECTS DEL MODAL DE CORTES
@@ -555,6 +581,28 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // ============================
+  // BARBERO AUTOMÁTICO (CORREGIDO)
+  // ============================
+
+  // 🔥 Recuperar el nombre del usuario logeado
+  const loggedUserName = localStorage.getItem("loggedUserName") || "SIN NOMBRE";
+
+  // 🔥 Upper case
+  document.getElementById("appointment-barber").value = loggedUserName.toUpperCase();
+  document.getElementById("walkin-barber").value = loggedUserName.toUpperCase();
+
+  // ============================
+  // DRAG DE MODALES
+  // ============================
+
+  makeCalendarModalsDraggable("calendar-modal", "day-details-modal", "calendar-title");
+  makeCalendarModalsDraggable("day-details-modal", "calendar-modal", "day-title");
+
+  // ============================
+  // LLENAR SELECTS WALK-IN
+  // ============================
+
   fillWalkinSelects();
 
   // ============================
@@ -570,6 +618,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }, 1000);
 
   renderServicesTable();
+
 
 });
 
@@ -618,6 +667,38 @@ function refreshAll() {
 // HISTORIAL DE CORTES
 // ============================
 
+// ============================
+// POPUP PARA PRECIO PERSONALIZADO EN WALK-IN
+// ============================
+
+document.getElementById("walkin-service").addEventListener("change", () => {
+  const serviceId = document.getElementById("walkin-service").value;
+  if (!serviceId) return;
+
+  const service = services.find(s => s.id === serviceId);
+  if (!service) return;
+
+  const usarCustom = confirm(
+    `El precio normal es $${service.price}. ¿Quieres modificar el precio solo para este walk-in?`
+  );
+
+  if (!usarCustom) {
+    document.getElementById("walkin-price-custom").value = service.price;
+    return;
+  }
+
+  let nuevoPrecio = prompt("Ingresa el precio personalizado:", service.price);
+
+  if (nuevoPrecio === null || nuevoPrecio.trim() === "" || isNaN(nuevoPrecio)) {
+    alert("Precio inválido. Se usará el precio normal.");
+    document.getElementById("walkin-price-custom").value = service.price;
+    return;
+  }
+
+  document.getElementById("walkin-price-custom").value = parseFloat(nuevoPrecio);
+});
+
+
 document.getElementById("clear-cuts-history-btn").addEventListener("click", async () => {
   if (!confirm("¿Borrar TODO el historial de cortes?")) return;
 
@@ -662,6 +743,42 @@ document.addEventListener("click", async function(e) {
   renderCutsToday();
   renderDashboardIncome();
 });
+
+
+// ============================
+// POPUP PARA PRECIO PERSONALIZADO
+// ============================
+
+document.getElementById("appointment-service").addEventListener("change", async () => {
+  const serviceId = document.getElementById("appointment-service").value;
+  if (!serviceId) return;
+
+  const service = services.find(s => s.id === serviceId);
+  if (!service) return;
+
+  const usarCustom = confirm(
+    `El precio normal es $${service.price}. ¿Quieres modificar el precio solo para esta cita?`
+  );
+
+  if (!usarCustom) {
+    // Guardar precio normal del servicio
+    document.getElementById("appointment-price-custom").value = service.price;
+    return;
+  }
+
+  // Pedir precio personalizado
+  let nuevoPrecio = prompt("Ingresa el precio personalizado para esta cita:", service.price);
+
+  if (nuevoPrecio === null || nuevoPrecio.trim() === "" || isNaN(nuevoPrecio)) {
+    alert("Precio inválido. Se usará el precio normal.");
+    document.getElementById("appointment-price-custom").value = service.price;
+    return;
+  }
+
+  // Guardar precio personalizado
+  document.getElementById("appointment-price-custom").value = parseFloat(nuevoPrecio);
+});
+
 
 
 // ============================
@@ -1017,3 +1134,12 @@ function showAvailableSlots(dateStr) {
   });
 
 }
+
+document.getElementById("open-calendar-btn").addEventListener("click", () => {
+  document.getElementById("calendar-modal").style.display = "block";
+  renderCalendar();
+});
+
+document.getElementById("close-calendar").addEventListener("click", () => {
+  document.getElementById("calendar-modal").style.display = "none";
+});
