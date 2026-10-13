@@ -106,11 +106,15 @@
     <!-- DASHBOARD -->
     <section id="tab-dashboard" class="tab-section active">
       <h2>Resumen del día</h2>
+      
+      
 
       <div class="dashboard-actions">
         <button id="dashboard-new-appointment-btn" class="primary-btn">
           + Nueva cita
         </button>
+
+        <button id="open-calendar-btn" class="primary-btn">📅 Ver calendario</button>
 
         <!-- ✔ BOTÓN DE CORTE RÁPIDO SOLO AQUÍ -->
         <button id="walkin-btn" class="primary-btn">
@@ -247,7 +251,8 @@
 
           <label>Barbero / Estilista</label>
           <input type="text" id="appointment-barber" value="Jose" required />
-
+          
+          <input type="hidden" id="appointment-price-custom" />
 
           <label>Estado</label>
           <select id="appointment-status">
@@ -368,6 +373,7 @@
 
         <label>Barbero</label>
         <input type="text" id="walkin-barber">
+        <input type="hidden" id="walkin-price-custom">
 
         <label>Notas</label>
         <input type="text" id="walkin-notes">
@@ -566,6 +572,42 @@
 
     </div>
   </div>
+
+  <!--Modal para calendario-->
+  <div id="calendar-modal" class="calendar-modal">
+    <div class="calendar-modal-content">
+
+      <div id="calendar-modal-header" class="modal-header">
+        <button id="close-calendar" class="primary-btn calendar-close-btn">Cerrar</button>
+      </div>
+
+      <h2 id="calendar-title"></h2>
+      <div id="calendar-grid" class="calendar-grid"></div>
+    </div>
+  </div>
+  
+ 
+  <!--Modal detail para calendario-->
+  <div id="day-details-modal" class="calendar-modal">
+    <div class="calendar-modal-content">
+
+      <!-- Botón premium para cerrar -->
+      <div id="day-details-header" class="modal-header">
+        <button id="close-day-details" class="primary-btn calendar-close-btn">Cerrar</button>
+      </div>
+
+      <h2 id="day-title"></h2>
+
+      <div id="day-appointments"></div>
+
+      <h3>Horarios disponibles</h3>
+      <div id="day-availability"></div>
+
+    </div>
+  </div>
+
+
+
 
 
   
