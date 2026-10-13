@@ -5,58 +5,58 @@ if (typeof appointments === "undefined") {
 
 
 function generateIncomeReport(fromDate, toDate) {
-  // 🔥 Asegurar que appointments existe
-  if (!Array.isArray(appointments)) return {
-    citasCount: 0,
-    citasTotal: 0,
-    walkinCount: 0,
-    walkinTotal: 0,
-    totalGeneral: 0
-  };
-
-  // 🔥 Asegurar que walkinCuts existe
-  if (!Array.isArray(walkinCuts)) return {
-    citasCount: 0,
-    citasTotal: 0,
-    walkinCount: 0,
-    walkinTotal: 0,
-    totalGeneral: 0
-  };
-
-  // 🔥 Asegurar que services existe
-  if (!Array.isArray(services)) return {
-    citasCount: 0,
-    citasTotal: 0,
-    walkinCount: 0,
-    walkinTotal: 0,
-    totalGeneral: 0
-  };
+  // 🔥 Validaciones
+  if (!Array.isArray(appointments) || !Array.isArray(walkinCuts) || !Array.isArray(services)) {
+    return {
+      citasCount: 0,
+      citasTotal: 0,
+      walkinCount: 0,
+      walkinTotal: 0,
+      totalGeneral: 0
+    };
+  }
 
   // ============================
-  // CITAS COMPLETADAS
+  // CITAS COMPLETADAS EN RANGO
   // ============================
-  let completedAppointments = appointments.filter(a => a.status === "completada");
+  let completedAppointments = appointments.filter(a => {
+    if (a.status !== "completada") return false;
+
+    const inRange =
+      (!fromDate || a.date >= fromDate) &&
+      (!toDate || a.date <= toDate);
+
+    return inRange;
+  });
 
   // ============================
   // WALK-INS EN RANGO
   // ============================
-  let walkinsInRange = walkinCuts.filter(c => {
-    return (!fromDate || c.date >= fromDate) &&
-           (!toDate || c.date <= toDate);
+  let walkinsInRange = walkinCuts.filter(w => {
+    return (!fromDate || w.date >= fromDate) &&
+           (!toDate || w.date <= toDate);
   });
 
   // ============================
-  // TOTAL DE CITAS
+  // TOTAL DE CITAS (precio personalizado o normal)
   // ============================
-  const citasTotal = completedAppointments.reduce((sum, a) => {
-    const service = services.find(s => s.id == a.serviceId);
-    return sum + (service ? service.price : 0);
+  const citasTotal = completedAppointments.reduce((sum, app) => {
+    const service = services.find(s => s.id == app.serviceId);
+
+    const finalPrice =
+      app.price !== undefined && app.price !== null
+        ? app.price
+        : (service ? service.price : 0);
+
+    return sum + finalPrice;
   }, 0);
 
   // ============================
-  // TOTAL DE WALK-INS
+  // TOTAL DE WALK-INS (siempre tienen price)
   // ============================
-  const walkinTotal = walkinsInRange.reduce((sum, w) => sum + w.price, 0);
+  const walkinTotal = walkinsInRange.reduce((sum, w) => {
+    return sum + (w.price || 0);
+  }, 0);
 
   // ============================
   // RETORNO FINAL
@@ -69,6 +69,7 @@ function generateIncomeReport(fromDate, toDate) {
     totalGeneral: citasTotal + walkinTotal
   };
 }
+
 
 function getTopServices() {
   if (!Array.isArray(appointments) || !Array.isArray(services)) return [];
@@ -186,7 +187,12 @@ async function renderCutsToday() {
   combined.forEach(item => {
     const client = clients.find(c => c.id === item.clientId);
     const service = services.find(s => s.id == item.serviceId);
-    const price = service ? service.price : (item.price || 0);
+
+    // ⭐ PRECIO REAL (walk-in o cita)
+    const finalPrice =
+      item.price !== undefined && item.price !== null
+        ? item.price
+        : (service ? service.price : 0);
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -194,11 +200,12 @@ async function renderCutsToday() {
       <td>${client ? client.name : "Walk-in"}</td>
       <td>${service ? service.name : "—"}</td>
       <td>${item.barber}</td>
-      <td>$${price.toFixed(2)}</td>
+      <td>$${finalPrice.toFixed(2)}</td>
     `;
     tbody.appendChild(tr);
   });
 }
+
 
 async function renderCutsHistory(dateFilter = null, nameFilter = "") {
   const tbody = document.getElementById("cuts-history-table");
@@ -230,7 +237,12 @@ async function renderCutsHistory(dateFilter = null, nameFilter = "") {
   combined.forEach(item => {
     const client = clients.find(c => c.id === item.clientId);
     const service = services.find(s => s.id == item.serviceId);
-    const price = service ? service.price : (item.price || 0);
+
+    // ⭐ PRECIO REAL (walk-in o cita)
+    const finalPrice =
+      item.price !== undefined && item.price !== null
+        ? item.price
+        : (service ? service.price : 0);
 
     const tr = document.createElement("tr");
     tr.innerHTML = `
@@ -239,7 +251,7 @@ async function renderCutsHistory(dateFilter = null, nameFilter = "") {
       <td>${client ? client.name : "Walk-in"}</td>
       <td>${service ? service.name : "—"}</td>
       <td>${item.barber}</td>
-      <td>$${price.toFixed(2)}</td>
+      <td>$${finalPrice.toFixed(2)}</td>
       <td>
         <button class="small delete-cut-btn" data-id="${item.id}" data-type="${item.type}">
           Eliminar
@@ -249,6 +261,7 @@ async function renderCutsHistory(dateFilter = null, nameFilter = "") {
     tbody.appendChild(tr);
   });
 }
+
 
 document.getElementById("cuts-search").addEventListener("input", (e) => {
   const date = document.getElementById("cuts-filter-date").value;
@@ -272,29 +285,31 @@ async function clearCutsHistory() {
 }
 
 function calculateTodayIncome() {
-  if (!Array.isArray(appointments) || !Array.isArray(walkinCuts) || !Array.isArray(services)) {
-    return {
-      citasCount: 0,
-      citasTotal: 0,
-      walkinCount: 0,
-      walkinTotal: 0,
-      totalGeneral: 0
-    };
-  }
-
   const today = new Date().toLocaleDateString("en-CA");
 
+  // Citas completadas hoy
   const completedAppointments = appointments.filter(a =>
     a.date === today && a.status === "completada"
   );
 
-  const walkinsToday = walkinCuts.filter(w => w.date === today);
+  // Walk-ins hoy
+  const walkinsToday = walkinCuts.filter(w =>
+    w.date === today
+  );
 
-  const citasTotal = completedAppointments.reduce((sum, a) => {
-    const service = services.find(s => s.id == a.serviceId);
-    return sum + (service ? service.price : 0);
+  // ⭐ Total citas (precio personalizado o normal)
+  const citasTotal = completedAppointments.reduce((sum, app) => {
+    const service = services.find(s => s.id === app.serviceId);
+
+    const finalPrice =
+      app.price !== undefined && app.price !== null
+        ? app.price
+        : (service ? service.price : 0);
+
+    return sum + finalPrice;
   }, 0);
 
+  // ⭐ Total walk-ins (ellos ya tienen su propio price)
   const walkinTotal = walkinsToday.reduce((sum, w) => sum + w.price, 0);
 
   return {
@@ -305,6 +320,7 @@ function calculateTodayIncome() {
     totalGeneral: citasTotal + walkinTotal
   };
 }
+
 
 // Puedes dejar este stub o usarlo para pruebas internas
 window.cargarCitasFirestore = async function() {
