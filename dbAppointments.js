@@ -19,32 +19,32 @@ async function getAppointmentsFromFirestore() {
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
+window.getAppointments = getAppointmentsFromFirestore;
+
+
 // ===============================
 // 🔥 Guardar o actualizar cita
 // ===============================
 async function saveAppointmentToFirestore(app) {
-  const uid = getUserId();
-  if (!uid) return;
+  const user = auth.currentUser;
+  if (!user) return;
 
-  // 🔥 CAMBIO IMPORTANTE
-  app.userId = uid;
-
-  const ref = firebase.firestore()
+  const ref = db
     .collection("users")
-    .doc(uid)
+    .doc(user.uid)
     .collection("appointments");
 
-  // Nueva cita
   if (!app.id) {
-    const docRef = await ref.add(app);
-    app.id = docRef.id;
-    await ref.doc(app.id).set(app, { merge: true });
-    return;
+    // Crear nueva cita
+    const newDoc = await ref.add(app);
+    app.id = newDoc.id;
+    await ref.doc(app.id).update({ id: app.id });
+  } else {
+    // Actualizar cita existente
+    await ref.doc(app.id).set(app);
   }
-
-  // Cita existente
-  await ref.doc(app.id).set(app, { merge: true });
 }
+
 
 // ===============================
 // 🔥 Eliminar cita
