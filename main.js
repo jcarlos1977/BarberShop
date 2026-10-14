@@ -1143,3 +1143,10 @@ document.getElementById("open-calendar-btn").addEventListener("click", () => {
 document.getElementById("close-calendar").addEventListener("click", () => {
   document.getElementById("calendar-modal").style.display = "none";
 });
+
+
+document.getElementById("filter-status-programada").addEventListener("change", refreshAppointmentsTable);
+document.getElementById("filter-status-completada").addEventListener("change", refreshAppointmentsTable);
+document.getElementById("filter-status-cancelada").addEventListener("change", refreshAppointmentsTable);
+
+
