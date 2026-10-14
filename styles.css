@@ -908,6 +908,12 @@ table {
   width: 100%;
   cursor: move;
   margin-bottom: 10px;
+
+  /* Evita que Android/iPhone interpreten scroll */
+  touch-action: none;
+
+  /* Evita seleccionar texto mientras arrastras */
+  user-select: none;
 }
 
 
