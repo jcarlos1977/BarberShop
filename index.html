@@ -271,14 +271,33 @@
           <h3>Citas por fecha</h3>
           <label>Fecha</label>
           <input type="date" id="appointments-filter-date" />
-          <button id="appointments-filter-btn">Filtrar</button>
+          <button id="appointments-filter-btn">Filtrar</button><br>
 
-          <input 
-            type="text" 
-            id="appointment-search" 
-            placeholder="Buscar por nombre del cliente..." 
-            style="width: 100%; padding: 8px; margin: 10px 0;"
-          >
+          <div class="appointment-filters-row">
+
+            <input
+              type="text"
+              id="appointment-search"
+              placeholder="Buscar por nombre del cliente..."
+            >
+
+            <label class="status-filter">
+              <input type="checkbox" id="filter-status-programada" checked>
+              Programada
+            </label>
+
+            <label class="status-filter">
+              <input type="checkbox" id="filter-status-completada" checked>
+              Completada
+            </label>
+
+            <label class="status-filter">
+              <input type="checkbox" id="filter-status-cancelada" checked>
+              Cancelada
+            </label>
+
+          </div>
+
 
 
           <table>
