@@ -743,3 +743,22 @@ function makeCalendarModalsDraggable(mainModalId, detailModalId, headerId) {
   document.addEventListener("touchcancel", stopDrag);
 }
 
+
+window.addEventListener("resize", () => {
+
+  document.querySelectorAll(".calendar-modal-content").forEach(modal => {
+
+    const maxLeft = window.innerWidth - modal.offsetWidth;
+    const maxTop = window.innerHeight - modal.offsetHeight;
+
+    let left = parseInt(modal.style.left) || 0;
+    let top = parseInt(modal.style.top) || 0;
+
+    left = Math.max(0, Math.min(left, maxLeft));
+    top = Math.max(0, Math.min(top, maxTop));
+
+    modal.style.left = `${left}px`;
+    modal.style.top = `${top}px`;
+  });
+
+});
