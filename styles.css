@@ -910,3 +910,36 @@ table {
   margin-bottom: 10px;
 }
 
+
+.appointment-filters-row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
+
+#appointment-search {
+  width: 300px;
+  padding: 8px;
+}
+
+.status-filter {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.status-filter:nth-child(2) {
+  color: #d35400; /* Programada */
+}
+
+.status-filter:nth-child(3) {
+  color: #27ae60; /* Completada */
+}
+
+.status-filter:nth-child(4) {
+  color: #c0392b; /* Cancelada */
+}
