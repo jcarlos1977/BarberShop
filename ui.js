@@ -134,18 +134,23 @@ document.getElementById("inventory-search").addEventListener("input", (e) => {
   renderInventoryTable(e.target.value);
 });
 
+
 function renderAppointmentsTable(dateFilter = "", nameFilter = "") {
   const tbody = document.getElementById("appointments-table-body");
   tbody.innerHTML = "";
 
   let filtered = appointments;
 
-  // Filtro por fecha
+  // ============================
+  // FILTRO POR FECHA
+  // ============================
   if (dateFilter) {
     filtered = filtered.filter(a => a.date === dateFilter);
   }
 
-  // Filtro por nombre del cliente
+  // ============================
+  // FILTRO POR NOMBRE
+  // ============================
   if (nameFilter.trim() !== "") {
     filtered = filtered.filter(app => {
       const client = clients.find(c => c.id === app.clientId);
@@ -153,17 +158,82 @@ function renderAppointmentsTable(dateFilter = "", nameFilter = "") {
     });
   }
 
+  // ============================
+  // FILTRO POR ESTADO
+  // ============================
+  const showProgramada =
+    document.getElementById("filter-status-programada")?.checked ?? true;
+
+  const showCompletada =
+    document.getElementById("filter-status-completada")?.checked ?? true;
+
+  const showCancelada =
+    document.getElementById("filter-status-cancelada")?.checked ?? true;
+
+  filtered = filtered.filter(app => {
+    if (app.status === "programada" && showProgramada) return true;
+    if (app.status === "completada" && showCompletada) return true;
+    if (app.status === "cancelada" && showCancelada) return true;
+    return false;
+  });
+
+  // ============================
+  // ORDENAR POR FECHA Y HORA
+  // MÁS NUEVAS ARRIBA
+  // ============================
+  filtered.sort((a, b) => {
+    const dateA = `${a.date}T${a.time}`;
+    const dateB = `${b.date}T${b.time}`;
+
+    return new Date(dateB) - new Date(dateA);
+  });
+
+  const now = new Date();
+
   filtered.forEach(app => {
     const client = clients.find(c => c.id === app.clientId);
     const service = services.find(s => s.id == app.serviceId);
 
-    // ⭐ PRECIO FINAL (personalizado o normal)
-    const finalPrice = 
-      app.price !== undefined && app.price !== null
-        ? app.price
-        : (service ? service.price : 0);
+    // ============================
+    // PRECIO FINAL
+    // ============================
+    const finalPrice =
+      app.price !== undefined &&
+      app.price !== null &&
+      !isNaN(app.price)
+        ? Number(app.price)
+        : (service ? Number(service.price) : 0);
+
+    // ============================
+    // ESTADO VISUAL
+    // ============================
+    const appointmentDateTime = new Date(`${app.date}T${app.time}`);
+
+    const isPast =
+      appointmentDateTime < now &&
+      app.status === "programada";
+
+    const isCompleted =
+      app.status === "completada";
+
+    const isCanceled =
+      app.status === "cancelada";
+
+    let rowColor = "";
+
+    if (isCompleted) {
+      rowColor = "background-color:#d4f8d4;";
+    }
+    else if (isCanceled) {
+      rowColor = "background-color:#f0f0f0;color:#777;";
+    }
+    else if (isPast) {
+      rowColor = "background-color:#ffd6d6;";
+    }
 
     const tr = document.createElement("tr");
+    tr.setAttribute("style", rowColor);
+
     tr.innerHTML = `
       <td>${formatDateMMDDYYYY(app.date)}</td>
       <td>${formatTimeTo12Hour(app.time)}</td>
@@ -171,19 +241,32 @@ function renderAppointmentsTable(dateFilter = "", nameFilter = "") {
       <td>${service ? service.name : "—"}</td>
       <td>${app.barber}</td>
       <td>${app.status}</td>
-
-      <!-- ⭐ Mostrar precio final -->
       <td>$${finalPrice.toFixed(2)}</td>
-
       <td>
-        <button class="small" data-action="edit" data-id="${app.id}">Editar</button>
-        <button class="small" data-action="delete" data-id="${app.id}">Eliminar</button>
-        <button class="small whatsapp-btn" data-id="${app.id}">WhatsApp</button>
+        <button class="small" data-action="edit" data-id="${app.id}">
+          Editar
+        </button>
+
+        <button class="small" data-action="delete" data-id="${app.id}">
+          Eliminar
+        </button>
+
+        <button class="small whatsapp-btn" data-id="${app.id}">
+          WhatsApp
+        </button>
       </td>
     `;
 
     tbody.appendChild(tr);
   });
+}
+
+
+
+function refreshAppointmentsTable() {
+  const dateFilter = document.getElementById("appointments-filter-date").value;
+  const nameFilter = document.getElementById("appointment-search").value;
+  renderAppointmentsTable(dateFilter, nameFilter);
 }
 
 
@@ -529,6 +612,7 @@ function calculateAvailability(appointments, serviceDuration = 30) {
 
 
 function makeCalendarModalsDraggable(mainModalId, detailModalId, headerId) {
+
   const mainModal = document.getElementById(mainModalId);
   const detailModal = document.getElementById(detailModalId);
   const header = document.getElementById(headerId);
@@ -544,36 +628,96 @@ function makeCalendarModalsDraggable(mainModalId, detailModalId, headerId) {
 
   header.style.cursor = "move";
 
+  function getClientPosition(e) {
+    if (e.touches && e.touches.length > 0) {
+      return {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY
+      };
+    }
+
+    return {
+      x: e.clientX,
+      y: e.clientY
+    };
+  }
+
   function startDrag(e) {
+
     if (e.target.classList.contains("calendar-close-btn")) return;
 
+    const pos = getClientPosition(e);
     const rect = mainContent.getBoundingClientRect();
-    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
 
-    offsetX = clientX - rect.left;
-    offsetY = clientY - rect.top;
+    offsetX = pos.x - rect.left;
+    offsetY = pos.y - rect.top;
 
     isDragging = true;
+
+    // Evita scroll accidental en móviles
+    if (e.cancelable) {
+      e.preventDefault();
+    }
   }
 
   function duringDrag(e) {
+
     if (!isDragging) return;
 
-    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    // Bloquea el scroll durante el drag
+    if (e.cancelable) {
+      e.preventDefault();
+    }
 
-    const newLeft = clientX - offsetX;
-    const newTop = clientY - offsetY;
+    const pos = getClientPosition(e);
 
-    // mover contenido principal
+    let newLeft = pos.x - offsetX;
+    let newTop = pos.y - offsetY;
+
+    // Mantener dentro de la pantalla
+    const maxLeft =
+      window.innerWidth - mainContent.offsetWidth;
+
+    const maxTop =
+      window.innerHeight - mainContent.offsetHeight;
+
+    newLeft = Math.max(
+      0,
+      Math.min(newLeft, maxLeft)
+    );
+
+    newTop = Math.max(
+      0,
+      Math.min(newTop, maxTop)
+    );
+
     mainContent.style.left = `${newLeft}px`;
     mainContent.style.top = `${newTop}px`;
 
-    // si el otro modal está abierto, moverlo también
+    // Si el otro modal está abierto lo mueve junto
     if (detailModal.style.display === "block") {
-      detailContent.style.left = `${newLeft + 40}px`;
-      detailContent.style.top = `${newTop + 40}px`;
+
+      let detailLeft = newLeft + 40;
+      let detailTop = newTop + 40;
+
+      const detailMaxLeft =
+        window.innerWidth - detailContent.offsetWidth;
+
+      const detailMaxTop =
+        window.innerHeight - detailContent.offsetHeight;
+
+      detailLeft = Math.max(
+        0,
+        Math.min(detailLeft, detailMaxLeft)
+      );
+
+      detailTop = Math.max(
+        0,
+        Math.min(detailTop, detailMaxTop)
+      );
+
+      detailContent.style.left = `${detailLeft}px`;
+      detailContent.style.top = `${detailTop}px`;
     }
   }
 
@@ -581,12 +725,21 @@ function makeCalendarModalsDraggable(mainModalId, detailModalId, headerId) {
     isDragging = false;
   }
 
+  // Desktop
   header.addEventListener("mousedown", startDrag);
   document.addEventListener("mousemove", duringDrag);
   document.addEventListener("mouseup", stopDrag);
 
-  header.addEventListener("touchstart", startDrag);
-  document.addEventListener("touchmove", duringDrag, { passive: false });
+  // Mobile
+  header.addEventListener("touchstart", startDrag, {
+    passive: false
+  });
+
+  document.addEventListener("touchmove", duringDrag, {
+    passive: false
+  });
+
   document.addEventListener("touchend", stopDrag);
+  document.addEventListener("touchcancel", stopDrag);
 }
 
