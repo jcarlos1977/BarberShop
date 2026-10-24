@@ -2,653 +2,639 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Estética / Barbería - Gestión</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Panel de Gestión · Estética / Barbería</title>
   <link rel="stylesheet" href="styles.css" />
-
-  
-
 </head>
 <body>
 
-
-  <div id="auth-screen" class="login-container">
-    <h2>Iniciar sesión</h2>
-
-    
-    <div>
-    <input id="auth-email" class="login-input" type="email" placeholder="Correo">
-    </div>
-    
-    <div>
-    <input id="auth-password" class="login-input" type="password" placeholder="Contraseña">
-    </div>
-
-    <div>
-    <button id="auth-login-btn" class="primary-btn">Entrar</button>
-    </div>
-    
-
-    <div id="auth-error" class="login-error"></div>
+  <!-- ===================== PANTALLA DE CARGA ===================== -->
+  <div id="loading-screen" class="loading-screen">
+    <div class="spinner"></div>
+    <p id="loading-text">Cargando...</p>
   </div>
 
-  <div id="app-screen" style="display:none;">
-    <!-- Aquí va toda tu aplicación -->
-    <button id="logout-btn" class="secondary-btn">Cerrar sesión</button>
+  <!-- ===================== LOGIN ===================== -->
+  <div id="auth-screen" class="auth-screen hidden">
+    <form id="auth-form" class="auth-card" novalidate>
+      <div class="auth-logo">✂️</div>
+      <h1 class="auth-title">Panel de Gestión</h1>
+      <p class="auth-subtitle">Estética / Barbería</p>
+
+      <label for="auth-username">Usuario o correo</label>
+      <input id="auth-username" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Tu usuario" />
+
+      <label for="auth-password">Contraseña</label>
+      <input id="auth-password" type="password" autocomplete="current-password" placeholder="Tu contraseña" />
+
+      <button id="auth-login-btn" type="submit" class="btn btn-primary btn-block">Entrar</button>
+      <div id="auth-error" class="auth-error" role="alert"></div>
+    </form>
   </div>
 
+  <!-- ===================== APLICACIÓN ===================== -->
+  <div id="app-screen" class="hidden">
 
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-
-  <!-- Firestore (compat) -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-
-  <!-- Firebase Auth (compat) con versión 10.7.1 -->
- <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-
-  <script>
-    
-    const firebaseConfig = {
-      apiKey: "AIzaSyBcWtL3B5aNVpEV0ahXSaP3pK00lEbb6rM",
-      authDomain: "restauranteapp-ad17d.firebaseapp.com",
-      databaseURL: "https://restauranteapp-ad17d-default-rtdb.firebaseio.com",
-      projectId: "restauranteapp-ad17d",
-      storageBucket: "restauranteapp-ad17d.firebasestorage.app",
-      messagingSenderId: "132764157748",
-      appId: "1:132764157748:web:5bd87f5caeca177381c761"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const auth = firebase.auth();
-
-    
-    
-
-  </script>
-  
-  
-
-
-  <header class="app-header">
-
-    <!-- Primera línea -->
-    <div class="header-row top-row">
-      <h1>Panel de Gestión - Estética / Barbería</h1>
-      <span id="logged-user-name" class="user-name-display"></span>
-    </div>
-
-    <!-- Segunda línea -->
-    <div class="header-row bottom-row">
-      <span id="summary-today-appointments">Citas hoy: 0</span>
-      <span id="summary-today-income">Ingresos estimados: $0.00</span>
-      <span id="summary-clients-count">Clientes registrados: 0</span>
-    </div>
-
-  </header>
-
-
-
-
-  <nav class="app-nav">
-    <button data-tab="dashboard" class="nav-btn active">Dashboard</button>
-    <button data-tab="clients" class="nav-btn">Clientes</button>
-    <button data-tab="appointments" class="nav-btn">Citas</button>
-    <button data-tab="services" class="nav-btn">Servicios</button>
-    <button data-tab="inventory" class="nav-btn">Inventario</button>
-    <button data-tab="cuts" class="nav-btn">Cortes</button>
-    <button data-tab="reports" class="nav-btn">Reportes</button>
-    <button data-tab="settings" class="nav-btn">Configuración</button>
-    <button data-tab="service-photos" class="nav-btn">Fotos de Servicios</button>
-  </nav>
-
-  <main class="app-main">
-
-    <!-- DASHBOARD -->
-    <section id="tab-dashboard" class="tab-section active">
-      <h2>Resumen del día</h2>
-      
-      
-
-      <div class="dashboard-actions">
-        <button id="dashboard-new-appointment-btn" class="primary-btn">
-          + Nueva cita
-        </button>
-
-        <button id="open-calendar-btn" class="primary-btn">📅 Ver calendario</button>
-
-        <!-- ✔ BOTÓN DE CORTE RÁPIDO SOLO AQUÍ -->
-        <button id="walkin-btn" class="primary-btn">
-          + Corte rápido
-        </button>
-
-        <div class="business-income">
-          <h3>Ingreso del día</h3>
-          <div id="dashboard-income-today"></div>
+    <header class="app-header">
+      <div class="header-top">
+        <div class="brand">
+          <span class="brand-icon">✂️</span>
+          <h1>Panel de Gestión</h1>
         </div>
-
-      </div>
-
-      
-
-      <div class="dashboard-extra">
-        <div class="card">
-          <h3>Alertas rápidas</h3>
-          <ul id="dashboard-quick-alerts"></ul>
-        </div>
-
-        <div class="card">
-          <h3>Clientes nuevos hoy</h3>
-          <ul id="dashboard-new-clients-list"></ul>
+        <div class="header-user">
+          <span id="logged-user-name" class="user-name"></span>
+          <button id="logout-btn" class="btn btn-ghost btn-sm">Cerrar sesión</button>
         </div>
       </div>
 
-      <div class="dashboard-grid">
-        <div class="card">
-          <h3>Citas de hoy</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Hora</th>
-                <th>Cliente</th>
-                <th>Servicio</th>
-                <th>Barbero</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody id="dashboard-today-appointments-body"></tbody>
-          </table>
+      <div class="header-stats">
+        <div class="stat">
+          <span class="stat-label">Citas hoy</span>
+          <span id="summary-today-appointments" class="stat-value">0</span>
         </div>
-
-        <div class="card">
-          <h3>Alertas</h3>
-          <ul id="dashboard-alerts-list"></ul>
+        <div class="stat">
+          <span class="stat-label">Ingresos estimados hoy</span>
+          <span id="summary-today-income" class="stat-value">$0.00</span>
         </div>
-
-        <div class="card">
-          <h3>Servicios más vendidos (últimos 30 días)</h3>
-          <ul id="dashboard-top-services-list"></ul>
+        <div class="stat">
+          <span class="stat-label">Clientes registrados</span>
+          <span id="summary-clients-count" class="stat-value">0</span>
         </div>
       </div>
-    </section>
+    </header>
 
-    <!-- CLIENTES -->
-    <section id="tab-clients" class="tab-section">
-      <h2>Gestión de clientes</h2>
-      <div class="two-columns">
-        <form id="client-form" class="card">
-          <h3>Nuevo / Editar cliente</h3>
-          <input type="hidden" id="client-id" />
+    <nav class="app-nav">
+      <button data-tab="dashboard" class="nav-btn active">Dashboard</button>
+      <button data-tab="clients" class="nav-btn">Clientes</button>
+      <button data-tab="appointments" class="nav-btn">Citas</button>
+      <button data-tab="cuts" class="nav-btn">Cortes</button>
+      <button data-tab="services" class="nav-btn">Servicios</button>
+      <button data-tab="inventory" class="nav-btn">Inventario</button>
+      <button data-tab="reports" class="nav-btn">Reportes</button>
+      <button data-tab="service-photos" class="nav-btn">Fotos</button>
+      <button data-tab="settings" class="nav-btn">Configuración</button>
+    </nav>
 
-          <label>Nombre completo</label>
-          <input type="text" id="client-name" required />
+    <main class="app-main">
 
-          <label>Teléfono</label>
-          <input type="tel" id="client-phone" required />
+      <!-- ===================== DASHBOARD ===================== -->
+      <section id="tab-dashboard" class="tab-section active">
+        <div class="section-head">
+          <h2>Resumen del día</h2>
+          <div class="section-actions">
+            <button id="dashboard-new-appointment-btn" class="btn btn-primary">+ Nueva cita</button>
+            <button id="walkin-btn" class="btn btn-primary">+ Corte rápido</button>
+            <button id="open-calendar-btn" class="btn btn-secondary">📅 Calendario</button>
+          </div>
+        </div>
 
-          <label>Notas / preferencias</label>
-          <textarea id="client-notes"></textarea>
+        <div class="grid grid-3">
+          <div class="card">
+            <h3>Ingreso del día</h3>
+            <div id="dashboard-income-today"></div>
+          </div>
+          <div class="card">
+            <h3>Alertas rápidas</h3>
+            <ul id="dashboard-quick-alerts" class="list"></ul>
+          </div>
+          <div class="card">
+            <h3>Clientes nuevos hoy</h3>
+            <ul id="dashboard-new-clients-list" class="list"></ul>
+          </div>
+        </div>
 
-          <label>Cliente VIP</label>
-          <input type="checkbox" id="client-vip" />
+        <div class="grid grid-dashboard">
+          <div class="card">
+            <h3>Citas de hoy</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Hora</th>
+                    <th>Cliente</th>
+                    <th>Servicio</th>
+                    <th>Barbero</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboard-today-appointments-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Inventario bajo</h3>
+            <ul id="dashboard-alerts-list" class="list"></ul>
+          </div>
+
+          <div class="card">
+            <h3>Servicios más vendidos (30 días)</h3>
+            <ul id="dashboard-top-services-list" class="list"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== CLIENTES ===================== -->
+      <section id="tab-clients" class="tab-section">
+        <div class="section-head">
+          <h2>Clientes</h2>
+        </div>
+
+        <div class="two-columns">
+          <form id="client-form" class="card">
+            <h3 id="client-form-title">Nuevo cliente</h3>
+            <input type="hidden" id="client-id" />
+
+            <label for="client-name">Nombre completo</label>
+            <input type="text" id="client-name" required />
+
+            <label for="client-phone">Teléfono</label>
+            <input type="tel" id="client-phone" placeholder="Ej. 626 555 1234" required />
+
+            <label for="client-notes">Notas / preferencias</label>
+            <textarea id="client-notes"></textarea>
+
+            <label class="checkbox-row">
+              <input type="checkbox" id="client-vip" />
+              Cliente VIP
+            </label>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Guardar cliente</button>
+              <button type="button" id="client-form-reset" class="btn btn-secondary">Limpiar</button>
+            </div>
+          </form>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>Listado de clientes</h3>
+            </div>
+
+            <input type="text" id="client-search" class="search-input" placeholder="Buscar por nombre o teléfono..." />
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Teléfono</th>
+                    <th>Notas</th>
+                    <th>Fotos</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="clients-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== CITAS ===================== -->
+      <section id="tab-appointments" class="tab-section">
+        <div class="section-head">
+          <h2>Agenda y citas</h2>
+        </div>
+
+        <div class="two-columns">
+          <form id="appointment-form" class="card">
+            <h3 id="appointment-form-title">Nueva cita</h3>
+            <input type="hidden" id="appointment-id" />
+
+            <label for="appointment-date">Fecha</label>
+            <input type="date" id="appointment-date" required />
+
+            <div id="appointment-slots" class="slots"></div>
+
+            <label for="appointment-time">Hora</label>
+            <input type="time" id="appointment-time" required />
+
+            <label for="appointment-client">Cliente</label>
+            <select id="appointment-client" required></select>
+
+            <label for="appointment-service">Servicio</label>
+            <select id="appointment-service" required></select>
+
+            <label for="appointment-price">Precio</label>
+            <input type="number" id="appointment-price" min="0" step="0.01" placeholder="Se llena con el precio del servicio" />
+            <p class="field-hint">Puedes cambiarlo solo para esta cita.</p>
+
+            <label for="appointment-barber">Barbero / Estilista</label>
+            <input type="text" id="appointment-barber" required />
+
+            <label for="appointment-status">Estado</label>
+            <select id="appointment-status">
+              <option value="programada">Programada</option>
+              <option value="completada">Completada</option>
+              <option value="cancelada">Cancelada</option>
+            </select>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Guardar cita</button>
+              <button type="button" id="appointment-form-reset" class="btn btn-secondary">Nueva</button>
+            </div>
+          </form>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>Citas</h3>
+            </div>
+
+            <div class="filters-row">
+              <div class="filter-field">
+                <label for="appointments-filter-date">Fecha</label>
+                <input type="date" id="appointments-filter-date" />
+              </div>
+              <button type="button" id="appointments-filter-clear" class="btn btn-secondary btn-sm">Ver todas</button>
+            </div>
+
+            <input type="text" id="appointment-search" class="search-input" placeholder="Buscar por nombre del cliente..." />
+
+            <div class="filters-row">
+              <label class="status-filter status-programada">
+                <input type="checkbox" id="filter-status-programada" checked />
+                Programada
+              </label>
+              <label class="status-filter status-completada">
+                <input type="checkbox" id="filter-status-completada" checked />
+                Completada
+              </label>
+              <label class="status-filter status-cancelada">
+                <input type="checkbox" id="filter-status-cancelada" checked />
+                Cancelada
+              </label>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Hora</th>
+                    <th>Cliente</th>
+                    <th>Servicio</th>
+                    <th>Barbero</th>
+                    <th>Estado</th>
+                    <th>Total</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="appointments-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== CORTES ===================== -->
+      <section id="tab-cuts" class="tab-section">
+        <div class="section-head">
+          <h2>Registro de cortes</h2>
+        </div>
+
+        <div class="card">
+          <h3>Cortes del día</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Hora</th>
+                  <th>Tipo</th>
+                  <th>Cliente</th>
+                  <th>Servicio</th>
+                  <th>Barbero</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody id="cuts-today-table"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-head">
+            <h3>Historial de cortes</h3>
+            <button id="clear-cuts-history-btn" class="btn btn-danger btn-sm">Borrar cortes rápidos</button>
+          </div>
+
+          <div class="filters-row">
+            <div class="filter-field">
+              <label for="cuts-filter-date">Fecha</label>
+              <input type="date" id="cuts-filter-date" />
+            </div>
+            <button type="button" id="cuts-filter-clear" class="btn btn-secondary btn-sm">Ver todos</button>
+          </div>
+
+          <input type="text" id="cuts-search" class="search-input" placeholder="Buscar por nombre del cliente..." />
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Hora</th>
+                  <th>Tipo</th>
+                  <th>Cliente</th>
+                  <th>Servicio</th>
+                  <th>Barbero</th>
+                  <th>Total</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="cuts-history-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== SERVICIOS ===================== -->
+      <section id="tab-services" class="tab-section">
+        <div class="section-head">
+          <h2>Servicios y precios</h2>
+        </div>
+
+        <div class="two-columns">
+          <form id="service-form" class="card">
+            <h3 id="service-form-title">Nuevo servicio</h3>
+            <input type="hidden" id="service-id" />
+
+            <label for="service-name">Nombre del servicio</label>
+            <input type="text" id="service-name" required />
+
+            <label for="service-duration">Duración (minutos)</label>
+            <input type="number" id="service-duration" min="5" step="5" required />
+
+            <label for="service-price">Precio base</label>
+            <input type="number" id="service-price" min="0" step="0.01" required />
+
+            <label class="checkbox-row">
+              <input type="checkbox" id="service-active" checked />
+              Activo
+            </label>
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Guardar servicio</button>
+              <button type="button" id="service-form-reset" class="btn btn-secondary">Nuevo</button>
+            </div>
+          </form>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>Listado de servicios</h3>
+            </div>
+
+            <input type="text" id="service-search" class="search-input" placeholder="Buscar servicio por nombre..." />
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nombre</th>
+                    <th>Duración</th>
+                    <th>Precio</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="services-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== INVENTARIO ===================== -->
+      <section id="tab-inventory" class="tab-section">
+        <div class="section-head">
+          <h2>Inventario</h2>
+        </div>
+
+        <div class="two-columns">
+          <form id="inventory-form" class="card">
+            <h3 id="inventory-form-title">Nuevo producto</h3>
+            <input type="hidden" id="inventory-id" />
+
+            <label for="inventory-name">Nombre del producto</label>
+            <input type="text" id="inventory-name" required />
+
+            <label for="inventory-qty">Cantidad en stock</label>
+            <input type="number" id="inventory-qty" min="0" step="1" required />
+
+            <label for="inventory-min">Stock mínimo</label>
+            <input type="number" id="inventory-min" min="0" step="1" required />
+
+            <label for="inventory-cost">Costo unitario</label>
+            <input type="number" id="inventory-cost" min="0" step="0.01" required />
+
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary">Guardar producto</button>
+              <button type="button" id="inventory-form-reset" class="btn btn-secondary">Nuevo</button>
+            </div>
+          </form>
+
+          <div class="card">
+            <div class="card-head">
+              <h3>Listado de inventario</h3>
+            </div>
+
+            <input type="text" id="inventory-search" class="search-input" placeholder="Buscar producto..." />
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Mínimo</th>
+                    <th>Costo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="inventory-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== REPORTES ===================== -->
+      <section id="tab-reports" class="tab-section">
+        <div class="section-head">
+          <h2>Reportes y estadísticas</h2>
+        </div>
+
+        <div class="grid grid-3">
+          <div class="card">
+            <h3>Ingresos por rango de fechas</h3>
+            <label for="report-from-date">Desde</label>
+            <input type="date" id="report-from-date" />
+            <label for="report-to-date">Hasta</label>
+            <input type="date" id="report-to-date" />
+            <div class="form-actions">
+              <button id="report-generate-btn" class="btn btn-primary">Generar</button>
+            </div>
+            <div id="report-income-summary" class="report-result"></div>
+          </div>
+
+          <div class="card">
+            <h3>Servicios más vendidos</h3>
+            <ul id="report-top-services-list" class="list"></ul>
+          </div>
+
+          <div class="card">
+            <h3>Clientes frecuentes</h3>
+            <ul id="report-top-clients-list" class="list"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== FOTOS DE SERVICIOS ===================== -->
+      <section id="tab-service-photos" class="tab-section">
+        <div class="section-head">
+          <h2>Fotos de servicios</h2>
+        </div>
+        <div id="service-photos-container" class="photos-grid"></div>
+      </section>
+
+      <!-- ===================== CONFIGURACIÓN ===================== -->
+      <section id="tab-settings" class="tab-section">
+        <div class="section-head">
+          <h2>Configuración</h2>
+        </div>
+
+        <div class="card card-narrow">
+          <h3>Horario de trabajo</h3>
+          <p class="field-hint">Se usa para calcular los huecos disponibles en la agenda.</p>
+
+          <label for="settings-start-time">Hora de inicio</label>
+          <input type="time" id="settings-start-time" />
+
+          <label for="settings-end-time">Hora de cierre</label>
+          <input type="time" id="settings-end-time" />
 
           <div class="form-actions">
-            <button type="submit">Guardar cliente</button>
-            <button type="button" id="client-form-reset">Resetear</button>
+            <button id="settings-save-btn" class="btn btn-primary">Guardar configuración</button>
           </div>
-        </form>
-
-        <div class="card">
-          <h3>Listado de clientes</h3>
-
-          <!-- ⭐ Campo de búsqueda -->
-          <input 
-            type="text" 
-            id="client-search" 
-            placeholder="Buscar cliente por nombre..." 
-            style="width: 100%; padding: 8px; margin-bottom: 10px;"
-          >
-
-          <table>
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Teléfono</th>
-                <th>VIP</th>
-                <th>Acciones</th>
-                <th>Fotos Antes</th>
-                <th>Fotos Despues</th>
-              </tr>
-            </thead>
-            <tbody id="clients-table-body"></tbody>
-          </table>
         </div>
+      </section>
 
-      </div>
-    </section>
+    </main>
 
-    <!-- CITAS -->
-    <section id="tab-appointments" class="tab-section">
-      <h2>Agenda y citas</h2>
-      <div class="two-columns">
-        <form id="appointment-form" class="card">
-          <h3>Nueva cita</h3>
-          <input type="hidden" id="appointment-id" />
+    <footer class="app-footer">
+      <span>Estética / Barbería · Sistema de gestión</span>
+    </footer>
+  </div>
 
-          <label>Fecha</label>
-          <input type="date" id="appointment-date" required />
-          <div id="appointment-slots" style="margin-top: 10px; font-weight: bold;"></div>
-
-
-
-          <label>Hora</label>
-          <input type="time" id="appointment-time" required />
-
-          <label>Cliente</label>
-          <select id="appointment-client" required></select>
-
-          <label>Servicio</label>
-          <select id="appointment-service" required></select>
-
-          <label>Barbero / Estilista</label>
-          <input type="text" id="appointment-barber" value="Jose" required />
-          
-          <input type="hidden" id="appointment-price-custom" />
-
-          <label>Estado</label>
-          <select id="appointment-status">
-            <option value="programada">Programada</option>
-            <option value="completada">Completada</option>
-            <option value="cancelada">Cancelada</option>
-          </select>
-
-          <div class="form-actions">
-            <button type="submit">Guardar cita</button>
-            <button type="button" id="appointment-form-reset">Nueva</button>
-          </div>
-        </form>
-
-        <div class="card">
-          <h3>Citas por fecha</h3>
-          <label>Fecha</label>
-          <input type="date" id="appointments-filter-date" />
-          <button id="appointments-filter-btn">Filtrar</button><br>
-
-          <div class="appointment-filters-row">
-
-            <input
-              type="text"
-              id="appointment-search"
-              placeholder="Buscar por nombre del cliente..."
-            >
-
-            <label class="status-filter">
-              <input type="checkbox" id="filter-status-programada" checked>
-              Programada
-            </label>
-
-            <label class="status-filter">
-              <input type="checkbox" id="filter-status-completada" checked>
-              Completada
-            </label>
-
-            <label class="status-filter">
-              <input type="checkbox" id="filter-status-cancelada" checked>
-              Cancelada
-            </label>
-
-          </div>
-
-
-
-          <table>
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Hora</th>
-                <th>Cliente</th>
-                <th>Servicio</th>
-                <th>Barbero</th>
-                <th>Estado</th>
-                <th>Total</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="appointments-table-body"></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- CORTES -->
-    <section id="tab-cuts" class="tab-section">
-      <h2>Registro de cortes</h2>
-
-      <!-- ❌ BOTÓN ELIMINADO DE AQUÍ -->
-
-      <div class="card">
-        <h3>Cortes del día</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Hora</th>
-              <th>Cliente</th>
-              <th>Servicio</th>
-              <th>Barbero</th>
-              <th>Total</th>
-            </tr>
-          </thead>
-          <tbody id="cuts-today-table"></tbody>
-        </table>
-      </div>
-
-      <div class="card">
-
-        <button id="clear-cuts-history-btn" class="primary-btn">Borrar historial completo</button>
-        
-
-
-        <h3>Historial de cortes</h3>
-        <label>Fecha</label>
-        <input type="date" id="cuts-filter-date" />
-        <button id="cuts-filter-btn">Filtrar</button>
-
-        <input 
-          type="text" 
-          id="cuts-search" 
-          placeholder="Buscar por nombre del cliente..." 
-          style="width: 100%; padding: 8px; margin: 10px 0;"
-        >
-
-
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Hora</th>
-              <th>Cliente</th>
-              <th>Servicio</th>
-              <th>Barbero</th>
-              <th>Total</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="cuts-history-table"></tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- MODAL CORTE RÁPIDO -->
-    <div id="walkin-modal" class="modal hidden">
-      <div class="modal-content">
+  <!-- ===================== MODAL CORTE RÁPIDO ===================== -->
+  <div id="walkin-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-head">
         <h3>Registrar corte rápido</h3>
-
-        <label>Cliente (opcional)</label>
-        <select id="walkin-client">
-          <option value="">Walk-in (sin registro)</option>
-        </select>
-
-        <label>Servicio</label>
-        <select id="walkin-service"></select>
-
-        <label>Barbero</label>
-        <input type="text" id="walkin-barber">
-        <input type="hidden" id="walkin-price-custom">
-
-        <label>Notas</label>
-        <input type="text" id="walkin-notes">
-
-        <button id="walkin-save-btn">Guardar corte</button>
-        <button id="walkin-close-btn">Cerrar</button>
-      </div>
-    </div>
-
-    <!-- SERVICIOS -->
-    <section id="tab-services" class="tab-section">
-      <h2>Servicios y precios</h2>
-      <div class="two-columns">
-        <form id="service-form" class="card">
-          <h3>Nuevo / Editar servicio</h3>
-          <input type="hidden" id="service-id" />
-
-          <label>Nombre del servicio</label>
-          <input type="text" id="service-name" required />
-
-          <label>Duración (minutos)</label>
-          <input type="number" id="service-duration" min="5" step="5" required />
-
-          <label>Precio base</label>
-          <input type="number" id="service-price" min="0" step="0.01" required />
-
-          <label>Activo</label>
-          <input type="checkbox" id="service-active" checked />
-
-          <div class="form-actions">
-            <button type="submit">Guardar servicio</button>
-            <button type="button" id="service-form-reset">Nuevo</button>
-          </div>
-        </form>
-
-        <div class="card">
-          <h3>Listado de servicios</h3>
-
-          <input 
-            type="text" 
-            id="service-search" 
-            placeholder="Buscar servicio por nombre..." 
-            style="width: 100%; padding: 8px; margin-bottom: 10px;"
-          >
-
-          <table>
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Duración</th>
-                <th>Precio</th>
-                <th>Activo</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="services-table-body"></tbody>
-          </table>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- INVENTARIO -->
-    <section id="tab-inventory" class="tab-section">
-      <h2>Inventario</h2>
-      <div class="two-columns">
-        <form id="inventory-form" class="card">
-          <h3>Nuevo / Editar producto</h3>
-          <input type="hidden" id="inventory-id" />
-
-          <label>Nombre del producto</label>
-          <input type="text" id="inventory-name" required />
-
-          <label>Cantidad en stock</label>
-          <input type="number" id="inventory-qty" min="0" required />
-
-          <label>Stock mínimo</label>
-          <input type="number" id="inventory-min" min="0" required />
-
-          <label>Costo unitario</label>
-          <input type="number" id="inventory-cost" min="0" step="0.01" required />
-
-          <div class="form-actions">
-            <button type="submit">Guardar producto</button>
-            <button type="button" id="inventory-form-reset">Nuevo</button>
-          </div>
-        </form>
-
-        <div class="card">
-          <h3>Listado de inventario</h3>
-
-          <input 
-            type="text" 
-            id="inventory-search" 
-            placeholder="Buscar producto..." 
-            style="width: 100%; padding: 8px; margin-bottom: 10px;"
-          >
-
-          <table>
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th>Cantidad</th>
-                <th>Mínimo</th>
-                <th>Costo</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="inventory-table-body"></tbody>
-          </table>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- REPORTES -->
-    <section id="tab-reports" class="tab-section">
-      <h2>Reportes y estadísticas</h2>
-      <div class="reports-grid">
-        <div class="card">
-          <h3>Ingresos por rango de fechas</h3>
-          <label>Desde</label>
-          <input type="date" id="report-from-date" />
-          <label>Hasta</label>
-          <input type="date" id="report-to-date" />
-          <button id="report-generate-btn">Generar</button>
-          <div id="report-income-summary"></div>
-        </div>
-
-        <div class="card">
-          <h3>Servicios más vendidos</h3>
-          <ul id="report-top-services-list"></ul>
-        </div>
-
-        <div class="card">
-          <h3>Clientes frecuentes</h3>
-          <ul id="report-top-clients-list"></ul>
-        </div>
-      </div>
-    </section>
-
-    <!-- CONFIGURACIÓN -->
-    <section id="tab-settings" class="tab-section">
-      <h2>Configuración del sistema</h2>
-      <div class="card">
-        <h3>Horarios de trabajo</h3>
-        <label>Hora inicio</label>
-        <input type="time" id="settings-start-time" />
-        <label>Hora fin</label>
-        <input type="time" id="settings-end-time" />
-        <button id="settings-save-btn">Guardar configuración</button>
-      </div>
-    </section>
-    
-    <section id="tab-service-photos" class="tab-section">
-      <h2>Fotos de Servicios</h2>
-      <div id="service-photos-container" class="photos-grid"></div>
-    </section>
-
-
-
-
-
-  </main>
-
-  <footer class="app-footer">
-    <span>Estética / Barbería - Sistema de gestión local (localStorage)</span>
-  </footer>
-  
-  <!-- ⭐ MODAL DE FOTOS (PÉGALO AQUÍ) -->
-  <div id="photo-modal" class="photo-modal">
-    <span id="photo-modal-close" class="photo-modal-close">&times;</span>
-    <img id="photo-modal-img" class="photo-modal-img">
-    <p id="photo-modal-name" class="photo-modal-name"></p>
-  </div>
-
-
-  <div id="client-photo-modal" class="photo-modal">
-    <div class="photo-modal-content">
-
-      <span id="client-photo-close" class="photo-modal-close">&times;</span>
-
-      <h3 id="client-photo-title" class="photo-modal-title"></h3>
-
-      <div class="photo-preview-container">
-        <img id="client-photo-img" class="photo-modal-img">
+        <button type="button" id="walkin-close-btn" class="modal-close" aria-label="Cerrar">&times;</button>
       </div>
 
-      <div class="photo-actions">
-        <input type="file" id="client-photo-input" accept="image/*" class="photo-input">
+      <label for="walkin-client">Cliente (opcional)</label>
+      <select id="walkin-client"></select>
 
-        <button id="client-photo-save" class="photo-btn save-btn">Guardar foto</button>
-        <button id="client-photo-delete" class="photo-btn delete-btn">Eliminar foto</button>
+      <label for="walkin-service">Servicio</label>
+      <select id="walkin-service"></select>
+
+      <label for="walkin-price">Precio</label>
+      <input type="number" id="walkin-price" min="0" step="0.01" />
+      <p class="field-hint">Puedes cambiarlo solo para este corte.</p>
+
+      <label for="walkin-barber">Barbero</label>
+      <input type="text" id="walkin-barber" />
+
+      <label for="walkin-notes">Notas</label>
+      <input type="text" id="walkin-notes" />
+
+      <div class="form-actions">
+        <button type="button" id="walkin-save-btn" class="btn btn-primary">Guardar corte</button>
+        <button type="button" id="walkin-cancel-btn" class="btn btn-secondary">Cancelar</button>
       </div>
-
     </div>
   </div>
 
-  <!--Modal para calendario-->
-  <div id="calendar-modal" class="calendar-modal">
+  <!-- ===================== MODAL FOTO DE SERVICIO ===================== -->
+  <div id="photo-modal" class="modal modal-dark hidden">
+    <button type="button" id="photo-modal-close" class="viewer-close" aria-label="Cerrar">&times;</button>
+    <div class="viewer">
+      <img id="photo-modal-img" class="viewer-img" alt="" />
+      <p id="photo-modal-name" class="viewer-name"></p>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL FOTOS ANTES / DESPUÉS ===================== -->
+  <div id="client-photo-modal" class="modal hidden">
+    <div class="modal-content modal-photo">
+      <div class="modal-head">
+        <h3 id="client-photo-title"></h3>
+        <button type="button" id="client-photo-close" class="modal-close" aria-label="Cerrar">&times;</button>
+      </div>
+
+      <div class="photo-preview">
+        <img id="client-photo-img" class="photo-preview-img hidden" alt="" />
+        <p id="client-photo-empty" class="photo-preview-empty">Cargando...</p>
+      </div>
+
+      <input type="file" id="client-photo-input" accept="image/*" class="photo-input" />
+
+      <div class="form-actions">
+        <button type="button" id="client-photo-save" class="btn btn-primary">Guardar foto</button>
+        <button type="button" id="client-photo-delete" class="btn btn-danger">Eliminar foto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MODAL CALENDARIO ===================== -->
+  <div id="calendar-modal" class="calendar-modal hidden">
     <div class="calendar-modal-content">
-
       <div id="calendar-modal-header" class="modal-header">
-        <button id="close-calendar" class="primary-btn calendar-close-btn">Cerrar</button>
+        <div class="calendar-nav">
+          <button type="button" id="calendar-prev" class="btn btn-secondary btn-sm">‹</button>
+          <h2 id="calendar-title"></h2>
+          <button type="button" id="calendar-next" class="btn btn-secondary btn-sm">›</button>
+        </div>
+        <button type="button" id="close-calendar" class="btn btn-danger btn-sm calendar-close-btn">Cerrar</button>
       </div>
 
-      <h2 id="calendar-title"></h2>
+      <div class="calendar-weekdays">
+        <span>Dom</span><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span>
+      </div>
       <div id="calendar-grid" class="calendar-grid"></div>
     </div>
   </div>
-  
- 
-  <!--Modal detail para calendario-->
-  <div id="day-details-modal" class="calendar-modal">
+
+  <!-- ===================== MODAL DETALLE DEL DÍA ===================== -->
+  <div id="day-details-modal" class="calendar-modal hidden">
     <div class="calendar-modal-content">
-
-      <!-- Botón premium para cerrar -->
       <div id="day-details-header" class="modal-header">
-        <button id="close-day-details" class="primary-btn calendar-close-btn">Cerrar</button>
+        <h2 id="day-title"></h2>
+        <button type="button" id="close-day-details" class="btn btn-danger btn-sm calendar-close-btn">Volver</button>
       </div>
-
-      <h2 id="day-title"></h2>
 
       <div id="day-appointments"></div>
 
       <h3>Horarios disponibles</h3>
-      <div id="day-availability"></div>
-
+      <div id="day-availability" class="slots"></div>
     </div>
   </div>
 
+  <!-- ===================== AVISOS ===================== -->
+  <div id="toast-container" class="toast-container"></div>
 
+  <!-- ===================== FIREBASE (compat) ===================== -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-
-
-  
-  <script src="storage.js"></script>
-  <script src="models.js"></script>
+  <!-- ===================== APP ===================== -->
+  <script src="db.js"></script>
   <script src="logic.js"></script>
   <script src="ui.js"></script>
-
-  <!-- Firestore modules -->
-  <script src="dbClients.js"></script>
-  <script src="dbServices.js"></script>
-  <script src="dbAppointments.js"></script>
-  <script src="dbInventory.js"></script>
-  <script src="dbCuts.js"></script>
-  
-  <!-- Main app -->
   <script src="main.js"></script>
-
-  
-
-  
-  
 
 </body>
 </html>
