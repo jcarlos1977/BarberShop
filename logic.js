@@ -1,328 +1,348 @@
-// Protección global para evitar errores si main.js aún no cargó datos
-if (typeof appointments === "undefined") {
-  window.appointments = [];
+// =====================================================
+// logic.js — Cálculos y utilidades (no dibuja nada)
+// =====================================================
+
+// ============================
+// FECHAS Y HORAS
+// ============================
+function dateToStr(d) {
+  return d.toLocaleDateString("en-CA"); // YYYY-MM-DD en hora local
 }
 
+function todayStr() {
+  return dateToStr(new Date());
+}
+
+function addDays(dateStr, days) {
+  const d = new Date(`${dateStr}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return dateToStr(d);
+}
+
+function nowHHMM() {
+  return new Date().toTimeString().slice(0, 5);
+}
+
+function toMinutes(timeStr) {
+  if (!timeStr) return 0;
+  const [h, m] = String(timeStr).split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+function minutesToHHMM(totalMinutes) {
+  const h = String(Math.floor(totalMinutes / 60)).padStart(2, "0");
+  const m = String(totalMinutes % 60).padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+function formatTimeTo12Hour(time24) {
+  if (!time24) return "";
+  let [hour, minute] = String(time24).split(":");
+  hour = parseInt(hour, 10);
+  if (isNaN(hour)) return time24;
+  const ampm = hour >= 12 ? "pm" : "am";
+  hour = hour % 12 || 12;
+  return `${hour}:${minute} ${ampm}`;
+}
+
+function formatDateMMDDYYYY(dateStr) {
+  if (!dateStr) return "";
+  const [yyyy, mm, dd] = String(dateStr).split("-");
+  return `${mm}-${dd}-${yyyy}`;
+}
+
+function appointmentDateTime(app) {
+  return new Date(`${app.date}T${app.time || "00:00"}`);
+}
+
+function byTime(a, b) {
+  return toMinutes(a.time) - toMinutes(b.time);
+}
+
+function byDateTimeDesc(a, b) {
+  const da = `${a.date || ""}T${a.time || ""}`;
+  const dbb = `${b.date || ""}T${b.time || ""}`;
+  return dbb.localeCompare(da);
+}
+
+// ============================
+// TEXTO Y NÚMEROS
+// ============================
+function formatMoney(value) {
+  return "$" + (Number(value) || 0).toFixed(2);
+}
+
+function toNumber(value, fallback = 0) {
+  if (value === null || value === undefined || value === "") return fallback;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+// Evita que un nombre con < > " rompa las tablas
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[c]));
+}
+
+// ============================
+// BÚSQUEDAS
+// ============================
+function findClient(id) {
+  if (!id) return null;
+  return clients.find(c => String(c.id) === String(id)) || null;
+}
+
+function findService(id) {
+  if (!id) return null;
+  return services.find(s => String(s.id) === String(id)) || null;
+}
+
+function findAppointment(id) {
+  return appointments.find(a => String(a.id) === String(id)) || null;
+}
+
+function clientName(id, fallback = "—") {
+  const client = findClient(id);
+  return client ? client.name : fallback;
+}
+
+function serviceName(id) {
+  const service = findService(id);
+  return service ? service.name : "—";
+}
+
+function getServiceDuration(serviceId) {
+  const service = findService(serviceId);
+  return service ? toNumber(service.duration, 30) : 30;
+}
+
+// Precio guardado en la cita/corte, o el del servicio si no tiene
+function getItemPrice(item) {
+  if (!item) return 0;
+  const saved = toNumber(item.price, NaN);
+  if (Number.isFinite(saved)) return saved;
+  const service = findService(item.serviceId);
+  return service ? toNumber(service.price) : 0;
+}
+
+// ============================
+// INGRESOS
+// ============================
+function inRange(dateStr, fromDate, toDate) {
+  if (!dateStr) return false;
+  return (!fromDate || dateStr >= fromDate) && (!toDate || dateStr <= toDate);
+}
 
 function generateIncomeReport(fromDate, toDate) {
-  // 🔥 Validaciones
-  if (!Array.isArray(appointments) || !Array.isArray(walkinCuts) || !Array.isArray(services)) {
-    return {
-      citasCount: 0,
-      citasTotal: 0,
-      walkinCount: 0,
-      walkinTotal: 0,
-      totalGeneral: 0
-    };
-  }
+  const citas = appointments.filter(a => a.status === "completada" && inRange(a.date, fromDate, toDate));
+  const walkins = walkinCuts.filter(w => inRange(w.date, fromDate, toDate));
 
-  // ============================
-  // CITAS COMPLETADAS EN RANGO
-  // ============================
-  let completedAppointments = appointments.filter(a => {
-    if (a.status !== "completada") return false;
+  const citasTotal = citas.reduce((sum, a) => sum + getItemPrice(a), 0);
+  const walkinTotal = walkins.reduce((sum, w) => sum + getItemPrice(w), 0);
 
-    const inRange =
-      (!fromDate || a.date >= fromDate) &&
-      (!toDate || a.date <= toDate);
-
-    return inRange;
-  });
-
-  // ============================
-  // WALK-INS EN RANGO
-  // ============================
-  let walkinsInRange = walkinCuts.filter(w => {
-    return (!fromDate || w.date >= fromDate) &&
-           (!toDate || w.date <= toDate);
-  });
-
-  // ============================
-  // TOTAL DE CITAS (precio personalizado o normal)
-  // ============================
-  const citasTotal = completedAppointments.reduce((sum, app) => {
-    const service = services.find(s => s.id == app.serviceId);
-
-    const finalPrice =
-      app.price !== undefined && app.price !== null
-        ? app.price
-        : (service ? service.price : 0);
-
-    return sum + finalPrice;
-  }, 0);
-
-  // ============================
-  // TOTAL DE WALK-INS (siempre tienen price)
-  // ============================
-  const walkinTotal = walkinsInRange.reduce((sum, w) => {
-    return sum + (w.price || 0);
-  }, 0);
-
-  // ============================
-  // RETORNO FINAL
-  // ============================
   return {
-    citasCount: completedAppointments.length,
+    citasCount: citas.length,
     citasTotal,
-    walkinCount: walkinsInRange.length,
+    walkinCount: walkins.length,
     walkinTotal,
     totalGeneral: citasTotal + walkinTotal
   };
-}
-
-
-function getTopServices() {
-  if (!Array.isArray(appointments) || !Array.isArray(services)) return [];
-  const counts = {};
-  appointments.forEach(app => {
-    const service = services.find(s => s.id == app.serviceId);
-    if (!service) return;
-    counts[service.name] = (counts[service.name] || 0) + 1;
-  });
-  return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-}
-
-function getTopClients() {
-  if (!Array.isArray(appointments) || !Array.isArray(clients)) return [];
-  const counts = {};
-  appointments.forEach(app => {
-    const client = clients.find(c => c.id === app.clientId);
-    if (!client) return;
-    counts[client.name] = (counts[client.name] || 0) + 1;
-  });
-  return Object.entries(counts).sort((a, b) => b[1] - a[1]);
-}
-
-function renderReports() {
-  const topServicesList = document.getElementById("report-top-services-list");
-  topServicesList.innerHTML = "";
-  getTopServices()
-    .slice(0, 10)
-    .forEach(([name, count]) => {
-      const li = document.createElement("li");
-      li.textContent = `${name}: ${count} citas`;
-      topServicesList.appendChild(li);
-    });
-
-  const topClientsList = document.getElementById("report-top-clients-list");
-  topClientsList.innerHTML = "";
-  getTopClients()
-    .slice(0, 10)
-    .forEach(([name, count]) => {
-      const li = document.createElement("li");
-      li.textContent = `${name}: ${count} citas`;
-      topClientsList.appendChild(li);
-    });
-}
-
-// CLIENTES NUEVOS
-function getNewClientsToday() {
-  if (!Array.isArray(clients)) return [];
-  const today = new Date().toLocaleDateString("en-CA");
-  return clients.filter(c => c.createdDate === today);
-}
-
-// CANCELADAS HOY
-function getCancelledAppointmentsToday() {
-  if (!appointments || !Array.isArray(appointments) || appointments.length === 0) {
-    return [];
-  }
-
-  const today = new Date().toLocaleDateString("en-CA");
-
-  return appointments.filter(a =>
-    a.date === today && a.status === "cancelada"
-  );
-}
-
-
-// RETRASADAS
-function getLateAppointments() {
-  // 🔥 Si todavía no hay citas cargadas, regresar lista vacía
-  if (!Array.isArray(appointments)) return [];
-
-  const now = new Date();
-
-  return appointments.filter(a => {
-    const appDate = new Date(`${a.date}T${a.time}`);
-    return appDate < now && a.status === "programada";
-  });
-}
-
-// 🔥 CAMBIO IMPORTANTE: ahora usa Firestore, no localStorage
-async function addWalkinCut({ id, clientId, serviceId, barber, time, price, notes }) {
-  const newCut = {
-    id: id || generateId("cut"),
-    clientId,
-    serviceId,
-    barber,
-    time,
-    price,
-    notes,
-    date: new Date().toLocaleDateString("en-CA")
-  };
-
-  await saveWalkinCutToFirestore(newCut);        // 🔥 CAMBIO IMPORTANTE
-  walkinCuts = await getWalkinCutsFromFirestore(); // 🔥 CAMBIO IMPORTANTE
-}
-
-async function renderCutsToday() {
-  const tbody = document.getElementById("cuts-today-table");
-  tbody.innerHTML = "";
-
-  if (!Array.isArray(walkinCuts) || !Array.isArray(appointments)) return;
-
-  const today = new Date().toLocaleDateString("en-CA");
-
-  const walkins = walkinCuts.filter(c => c.date === today);
-  const citas = appointments.filter(a => a.date === today && a.status === "completada");
-
-  const combined = [
-    ...walkins.map(w => ({ ...w, type: "walkin" })),
-    ...citas.map(a => ({ ...a, type: "cita" }))
-  ];
-
-  combined.sort((a, b) => a.time.localeCompare(b.time));
-
-  combined.forEach(item => {
-    const client = clients.find(c => c.id === item.clientId);
-    const service = services.find(s => s.id == item.serviceId);
-
-    // ⭐ PRECIO REAL (walk-in o cita)
-    const finalPrice =
-      item.price !== undefined && item.price !== null
-        ? item.price
-        : (service ? service.price : 0);
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${formatTimeTo12Hour(item.time)}</td>
-      <td>${client ? client.name : "Walk-in"}</td>
-      <td>${service ? service.name : "—"}</td>
-      <td>${item.barber}</td>
-      <td>$${finalPrice.toFixed(2)}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-
-async function renderCutsHistory(dateFilter = null, nameFilter = "") {
-  const tbody = document.getElementById("cuts-history-table");
-  tbody.innerHTML = "";
-
-  if (!Array.isArray(walkinCuts) || !Array.isArray(appointments)) return;
-
-  let walkins = walkinCuts;
-  if (dateFilter) walkins = walkinCuts.filter(c => c.date === dateFilter);
-
-  let citas = appointments.filter(a => a.status === "completada");
-  if (dateFilter) citas = citas.filter(a => a.date === dateFilter);
-
-  let combined = [
-    ...walkins.map(w => ({ ...w, type: "walkin" })),
-    ...citas.map(a => ({ ...a, type: "cita" }))
-  ];
-
-  if (nameFilter.trim() !== "") {
-    combined = combined.filter(item => {
-      const client = clients.find(c => c.id === item.clientId);
-      const name = client ? client.name : "Walk-in";
-      return name.toLowerCase().includes(nameFilter.toLowerCase());
-    });
-  }
-
-  combined.sort((a, b) => a.time.localeCompare(b.time));
-
-  combined.forEach(item => {
-    const client = clients.find(c => c.id === item.clientId);
-    const service = services.find(s => s.id == item.serviceId);
-
-    // ⭐ PRECIO REAL (walk-in o cita)
-    const finalPrice =
-      item.price !== undefined && item.price !== null
-        ? item.price
-        : (service ? service.price : 0);
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${formatDateMMDDYYYY(item.date)}</td>
-      <td>${formatTimeTo12Hour(item.time)}</td>
-      <td>${client ? client.name : "Walk-in"}</td>
-      <td>${service ? service.name : "—"}</td>
-      <td>${item.barber}</td>
-      <td>$${finalPrice.toFixed(2)}</td>
-      <td>
-        <button class="small delete-cut-btn" data-id="${item.id}" data-type="${item.type}">
-          Eliminar
-        </button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-
-document.getElementById("cuts-search").addEventListener("input", (e) => {
-  const date = document.getElementById("cuts-filter-date").value;
-  renderCutsHistory(date, e.target.value);
-});
-
-// 🔥 CAMBIO IMPORTANTE: ahora elimina en Firestore y recarga
-async function deleteCut(id) {
-  await deleteWalkinCutFromFirestore(id);          // 🔥 CAMBIO IMPORTANTE
-  walkinCuts = await getWalkinCutsFromFirestore(); // 🔥 CAMBIO IMPORTANTE
-  const date = document.getElementById("cuts-filter-date").value || null;
-  const search = document.getElementById("cuts-search").value || "";
-  await renderCutsHistory(date, search);
-}
-
-// 🔥 CAMBIO IMPORTANTE: ahora limpia en Firestore y recarga
-async function clearCutsHistory() {
-  await clearWalkinCutsFirestore();                // 🔥 CAMBIO IMPORTANTE
-  walkinCuts = await getWalkinCutsFromFirestore(); // 🔥 CAMBIO IMPORTANTE
-  await renderCutsHistory();
 }
 
 function calculateTodayIncome() {
-  const today = new Date().toLocaleDateString("en-CA");
-
-  // Citas completadas hoy
-  const completedAppointments = appointments.filter(a =>
-    a.date === today && a.status === "completada"
-  );
-
-  // Walk-ins hoy
-  const walkinsToday = walkinCuts.filter(w =>
-    w.date === today
-  );
-
-  // ⭐ Total citas (precio personalizado o normal)
-  const citasTotal = completedAppointments.reduce((sum, app) => {
-    const service = services.find(s => s.id === app.serviceId);
-
-    const finalPrice =
-      app.price !== undefined && app.price !== null
-        ? app.price
-        : (service ? service.price : 0);
-
-    return sum + finalPrice;
-  }, 0);
-
-  // ⭐ Total walk-ins (ellos ya tienen su propio price)
-  const walkinTotal = walkinsToday.reduce((sum, w) => sum + w.price, 0);
-
-  return {
-    citasCount: completedAppointments.length,
-    citasTotal,
-    walkinCount: walkinsToday.length,
-    walkinTotal,
-    totalGeneral: citasTotal + walkinTotal
-  };
+  const today = todayStr();
+  return generateIncomeReport(today, today);
 }
 
+// Ingresos estimados: citas de hoy no canceladas + cortes rápidos de hoy
+function calculateEstimatedIncomeToday() {
+  const today = todayStr();
+  const citas = appointments.filter(a => a.date === today && a.status !== "cancelada");
+  const walkins = walkinCuts.filter(w => w.date === today);
+  return citas.reduce((s, a) => s + getItemPrice(a), 0) +
+         walkins.reduce((s, w) => s + getItemPrice(w), 0);
+}
 
-// Puedes dejar este stub o usarlo para pruebas internas
-window.cargarCitasFirestore = async function() {
-  console.log("cargarCitasFirestore ejecutada (aún sin contenido)");
-};
+// ============================
+// ESTADÍSTICAS
+// ============================
+function countBy(list, keyFn) {
+  const counts = {};
+  list.forEach(item => {
+    const key = keyFn(item);
+    if (key) counts[key] = (counts[key] || 0) + 1;
+  });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+}
+
+function getSoldItems() {
+  return [
+    ...appointments.filter(a => a.status !== "cancelada"),
+    ...walkinCuts
+  ];
+}
+
+function getTopServices(lastDays = null) {
+  const from = lastDays ? addDays(todayStr(), -lastDays) : null;
+  const items = getSoldItems().filter(i => !from || (i.date && i.date >= from));
+  return countBy(items, i => {
+    const s = findService(i.serviceId);
+    return s ? s.name : null;
+  });
+}
+
+function getTopClients() {
+  return countBy(getSoldItems(), i => {
+    const c = findClient(i.clientId);
+    return c ? c.name : null;
+  });
+}
+
+function getNewClientsToday() {
+  const today = todayStr();
+  return clients.filter(c => c.createdDate === today);
+}
+
+// ============================
+// ALERTAS
+// ============================
+function getCancelledAppointmentsToday() {
+  const today = todayStr();
+  return appointments.filter(a => a.date === today && a.status === "cancelada").sort(byTime);
+}
+
+function getLateAppointmentsToday() {
+  const now = new Date();
+  const today = todayStr();
+  return appointments
+    .filter(a => a.date === today && a.status === "programada" && appointmentDateTime(a) <= now)
+    .sort(byTime);
+}
+
+function getUpcomingAppointments(withinMinutes = 60) {
+  const now = new Date();
+  const today = todayStr();
+  return appointments
+    .filter(a => a.date === today && a.status === "programada")
+    .filter(a => {
+      const diff = (appointmentDateTime(a) - now) / 60000;
+      return diff > 0 && diff <= withinMinutes;
+    })
+    .sort(byTime);
+}
+
+// Citas de días anteriores que se quedaron como "programada"
+function getPastOpenAppointments() {
+  const today = todayStr();
+  return appointments.filter(a => a.status === "programada" && a.date < today);
+}
+
+// ============================
+// AGENDA: HUECOS DISPONIBLES
+// ============================
+// Devuelve null si no hay horario configurado
+function getFreeSlots(dateStr, excludeId = null) {
+  if (!workHours.startTime || !workHours.endTime) return null;
+
+  const start = toMinutes(workHours.startTime);
+  const end = toMinutes(workHours.endTime);
+
+  const busy = appointments
+    .filter(a => a.date === dateStr && a.status !== "cancelada" && String(a.id) !== String(excludeId))
+    .map(a => {
+      const s = toMinutes(a.time);
+      return { start: s, end: s + getServiceDuration(a.serviceId) };
+    })
+    .sort((a, b) => a.start - b.start);
+
+  const slots = [];
+  let cursor = start;
+
+  busy.forEach(b => {
+    if (b.start > cursor) {
+      slots.push({ start: cursor, end: Math.min(b.start, end) });
+    }
+    cursor = Math.max(cursor, b.end);
+  });
+
+  if (cursor < end) slots.push({ start: cursor, end });
+
+  return slots
+    .filter(s => s.end > s.start)
+    .map(s => ({ ...s, minutes: s.end - s.start }));
+}
+
+// Busca otra cita que se cruce con el horario indicado
+function findOverlappingAppointment(dateStr, timeStr, serviceId, excludeId = null) {
+  const start = toMinutes(timeStr);
+  const end = start + getServiceDuration(serviceId);
+
+  return appointments.find(a => {
+    if (a.date !== dateStr || a.status === "cancelada") return false;
+    if (String(a.id) === String(excludeId)) return false;
+    const aStart = toMinutes(a.time);
+    const aEnd = aStart + getServiceDuration(a.serviceId);
+    return start < aEnd && aStart < end;
+  }) || null;
+}
+
+// ============================
+// WHATSAPP
+// ============================
+function buildWhatsAppUrl(phone, message) {
+  let digits = String(phone || "").replace(/\D/g, "");
+  if (!digits) return null;
+  if (digits.length === 10) digits = "1" + digits; // números de EE. UU. sin código
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+}
+
+function reminderMessage(app) {
+  const name = clientName(app.clientId, "");
+  const hora = formatTimeTo12Hour(app.time);
+  const cuando = app.date === todayStr()
+    ? `hoy a las ${hora}`
+    : `el ${formatDateMMDDYYYY(app.date)} a las ${hora}`;
+  return `Hola ${name}, te recordamos tu cita ${cuando}. ¡Te esperamos!`;
+}
+
+// ============================
+// IMÁGENES
+// Reduce la foto antes de guardarla (máx. ~900 KB)
+// ============================
+function compressImage(file, maxSize = 1200, quality = 0.75) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("No se pudo leer el archivo."));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("El archivo no es una imagen válida."));
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        let q = quality;
+        let data = canvas.toDataURL("image/jpeg", q);
+        while (data.length > 900000 && q > 0.3) {
+          q -= 0.1;
+          data = canvas.toDataURL("image/jpeg", q);
+        }
+
+        if (data.length > 1000000) {
+          reject(new Error("La foto es demasiado grande."));
+          return;
+        }
+        resolve(data);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
