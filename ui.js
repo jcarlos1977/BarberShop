@@ -1,5 +1,46 @@
-// ui.js
+// =====================================================
+// ui.js — Todo lo que dibuja en pantalla
+// =====================================================
 
+// ============================
+// AVISOS (TOASTS) Y MODALES
+// ============================
+function showToast(message, type = "success") {
+  const container = document.getElementById("toast-container");
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.classList.add("toast-hide");
+    setTimeout(() => toast.remove(), 300);
+  }, 3200);
+}
+
+function showModal(id) {
+  document.getElementById(id).classList.remove("hidden");
+}
+
+function hideModal(id) {
+  document.getElementById(id).classList.add("hidden");
+}
+
+function setBusy(button, busy, text = "Guardando...") {
+  if (!button) return;
+  if (busy) {
+    button.dataset.originalText = button.textContent;
+    button.textContent = text;
+    button.disabled = true;
+  } else {
+    if (button.dataset.originalText) button.textContent = button.dataset.originalText;
+    button.disabled = false;
+  }
+}
+
+// ============================
+// NAVEGACIÓN
+// ============================
 function switchTab(tabId) {
   document.querySelectorAll(".nav-btn").forEach(btn => {
     btn.classList.toggle("active", btn.dataset.tab === tabId);
@@ -7,616 +48,568 @@ function switchTab(tabId) {
   document.querySelectorAll(".tab-section").forEach(sec => {
     sec.classList.toggle("active", sec.id === "tab-" + tabId);
   });
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function renderClientsTable(filterText = "") {
-  const tbody = document.getElementById("clients-table-body");
-  tbody.innerHTML = "";
+// ============================
+// PIEZAS REUTILIZABLES
+// ============================
+function emptyRow(tbody, columns, text) {
+  tbody.innerHTML = `<tr><td colspan="${columns}" class="empty">${esc(text)}</td></tr>`;
+}
 
-  const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(filterText.toLowerCase())
+function renderList(ul, itemsHtml, emptyText) {
+  ul.innerHTML = itemsHtml.length
+    ? itemsHtml.join("")
+    : `<li class="list-empty">${esc(emptyText)}</li>`;
+}
+
+const STATUS_LABELS = {
+  programada: "Programada",
+  completada: "Completada",
+  cancelada: "Cancelada"
+};
+
+function statusBadge(status) {
+  return `<span class="badge badge-${esc(status)}">${esc(STATUS_LABELS[status] || status)}</span>`;
+}
+
+function typeBadge(type) {
+  return type === "cita"
+    ? `<span class="badge badge-cita">Cita</span>`
+    : `<span class="badge badge-walkin">Walk-in</span>`;
+}
+
+function inputValue(id) {
+  const el = document.getElementById(id);
+  return el ? el.value : "";
+}
+
+// ============================
+// CLIENTES
+// ============================
+function renderClientsTable() {
+  const tbody = document.getElementById("clients-table-body");
+  const filter = inputValue("client-search").toLowerCase().trim();
+
+  const list = clients.filter(c =>
+    String(c.name || "").toLowerCase().includes(filter) ||
+    String(c.phone || "").includes(filter)
   );
 
-  filteredClients.forEach(client => {
-    const tr = document.createElement("tr");
+  if (!list.length) {
+    emptyRow(tbody, 5, clients.length ? "Sin resultados." : "Todavía no hay clientes registrados.");
+    return;
+  }
 
-    tr.innerHTML = `
-      <td>${client.name}</td>
-      <td>${client.phone}</td>
-      <td>${client.vip ? "Sí" : "No"}</td>
-      
-      <td class="actions-cell">
-        <button class="small edit-client-btn" data-id="${client.id}">Editar</button>
-        <button class="small delete-client-btn" data-id="${client.id}">Eliminar</button>
-        
+  tbody.innerHTML = list.map(c => `
+    <tr>
+      <td>
+        <strong>${esc(c.name)}</strong>
+        ${c.vip ? '<span class="badge badge-vip">VIP</span>' : ""}
       </td>
-
-      <td class="photo-cell">
-        <button class="small photo-before-btn" data-id="${client.id}">Antes</button>
+      <td>${esc(c.phone)}</td>
+      <td class="notes-cell" title="${esc(c.notes || "")}">${esc(c.notes || "")}</td>
+      <td class="buttons-cell">
+        <button class="btn btn-light btn-sm" data-action="photo-before" data-id="${esc(c.id)}">Antes</button>
+        <button class="btn btn-light btn-sm" data-action="photo-after" data-id="${esc(c.id)}">Después</button>
       </td>
-
-      <td class="photo-cell">
-        <button class="small photo-after-btn" data-id="${client.id}">Después</button>
+      <td class="buttons-cell">
+        <button class="btn btn-secondary btn-sm" data-action="edit" data-id="${esc(c.id)}">Editar</button>
+        <button class="btn btn-danger btn-sm" data-action="delete" data-id="${esc(c.id)}">Eliminar</button>
       </td>
-
-    `;
-
-
-    tbody.appendChild(tr);
-  });
+    </tr>
+  `).join("");
 }
 
-document.getElementById("client-search").addEventListener("input", (e) => {
-  renderClientsTable(e.target.value);
-});
-
+// Llena el select de clientes de citas y del corte rápido
 function renderClientsSelect() {
-  const select = document.getElementById("appointment-client");
-  select.innerHTML = `<option value="">Selecciona cliente</option>`;
-  clients.forEach(client => {
+  fillSelect("appointment-client", clients, c => c.name, "Selecciona cliente");
+  fillSelect("walkin-client", clients, c => c.name, "Walk-in (sin registro)");
+}
+
+function fillSelect(selectId, list, labelFn, placeholder) {
+  const select = document.getElementById(selectId);
+  const current = select.value;
+
+  select.innerHTML = placeholder ? `<option value="">${esc(placeholder)}</option>` : "";
+  list.forEach(item => {
     const opt = document.createElement("option");
-    opt.value = client.id;
-    opt.textContent = client.name;
+    opt.value = item.id;
+    opt.textContent = labelFn(item);
     select.appendChild(opt);
   });
+
+  if (current && list.some(item => String(item.id) === current)) {
+    select.value = current;
+  }
 }
 
-function renderServicesTable(filterText = "") {
+// ============================
+// SERVICIOS
+// ============================
+function renderServicesTable() {
   const tbody = document.getElementById("services-table-body");
-  tbody.innerHTML = "";
+  const filter = inputValue("service-search").toLowerCase().trim();
 
-  const filtered = services.filter(service =>
-    service.name.toLowerCase().includes(filterText.toLowerCase())
-  );
+  const list = services.filter(s => String(s.name || "").toLowerCase().includes(filter));
 
-  filtered.forEach(service => {
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${service.name}</td>
-      <td>${service.duration} min</td>
-      <td>$${service.price.toFixed(2)}</td>
-      <td>${service.active ? "Sí" : "No"}</td>
-      <td>
-        <button class="small" data-action="edit" data-id="${service.id}">Editar</button>
-        <button class="small" data-action="delete" data-id="${service.id}">Eliminar</button>
+  if (!list.length) {
+    emptyRow(tbody, 5, services.length ? "Sin resultados." : "Todavía no hay servicios.");
+    return;
+  }
+
+  tbody.innerHTML = list.map(s => `
+    <tr class="${s.active ? "" : "row-muted"}">
+      <td><strong>${esc(s.name)}</strong></td>
+      <td>${esc(toNumber(s.duration))} min</td>
+      <td>${formatMoney(s.price)}</td>
+      <td>${s.active
+        ? '<span class="badge badge-completada">Activo</span>'
+        : '<span class="badge badge-cancelada">Inactivo</span>'}</td>
+      <td class="buttons-cell">
+        <button class="btn btn-secondary btn-sm" data-action="edit" data-id="${esc(s.id)}">Editar</button>
+        <button class="btn btn-danger btn-sm" data-action="delete" data-id="${esc(s.id)}">Eliminar</button>
       </td>
-    `;
-    tbody.appendChild(tr);
-  });
+    </tr>
+  `).join("");
 }
 
-document.getElementById("service-search").addEventListener("input", (e) => {
-  renderServicesTable(e.target.value);
-});
-
+// Llena el select de servicios de citas y del corte rápido (solo activos)
 function renderServicesSelect() {
-  const select = document.getElementById("appointment-service");
-  select.innerHTML = `<option value="">Selecciona servicio</option>`;
-  services
-    .filter(s => s.active)
-    .forEach(service => {
-      const opt = document.createElement("option");
-      opt.value = service.id;
-      opt.textContent = `${service.name} ($${service.price.toFixed(2)})`;
-      select.appendChild(opt);
-    });
+  const active = services.filter(s => s.active);
+  const label = s => `${s.name} (${formatMoney(s.price)})`;
+  fillSelect("appointment-service", active, label, "Selecciona servicio");
+  fillSelect("walkin-service", active, label, "Selecciona servicio");
 }
 
-function renderInventoryTable(filterText = "") {
+// Si se edita una cita con un servicio inactivo, lo agrega al select
+function ensureServiceOption(selectId, serviceId) {
+  const select = document.getElementById(selectId);
+  if (!serviceId) return;
+  const exists = Array.from(select.options).some(o => o.value === String(serviceId));
+  if (exists) return;
+
+  const service = findService(serviceId);
+  const opt = document.createElement("option");
+  opt.value = serviceId;
+  opt.textContent = service ? `${service.name} (inactivo)` : "Servicio eliminado";
+  select.appendChild(opt);
+}
+
+// ============================
+// INVENTARIO
+// ============================
+function renderInventoryTable() {
   const tbody = document.getElementById("inventory-table-body");
-  tbody.innerHTML = "";
+  const filter = inputValue("inventory-search").toLowerCase().trim();
 
-  const filtered = inventory.filter(item =>
-    item.name.toLowerCase().includes(filterText.toLowerCase())
-  );
+  const list = inventory.filter(i => String(i.name || "").toLowerCase().includes(filter));
 
-  filtered.forEach(item => {
-    const statusClass = item.qty <= item.min ? "status-low" : "status-ok";
-    const statusText = item.qty <= item.min ? "Bajo" : "OK";
+  if (!list.length) {
+    emptyRow(tbody, 6, inventory.length ? "Sin resultados." : "Todavía no hay productos.");
+    return;
+  }
 
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${item.name}</td>
-      <td>${item.qty}</td>
-      <td>${item.min}</td>
-      <td>$${item.cost.toFixed(2)}</td>
-      <td class="${statusClass}">${statusText}</td>
-      <td>
-        <button class="small" data-action="edit" data-id="${item.id}">Editar</button>
-        <button class="small" data-action="delete" data-id="${item.id}">Eliminar</button>
-      </td>
+  tbody.innerHTML = list.map(item => {
+    const low = toNumber(item.qty) <= toNumber(item.min);
+    return `
+      <tr>
+        <td><strong>${esc(item.name)}</strong></td>
+        <td>${esc(toNumber(item.qty))}</td>
+        <td>${esc(toNumber(item.min))}</td>
+        <td>${formatMoney(item.cost)}</td>
+        <td>${low
+          ? '<span class="badge badge-cancelada">Bajo</span>'
+          : '<span class="badge badge-completada">OK</span>'}</td>
+        <td class="buttons-cell">
+          <button class="btn btn-secondary btn-sm" data-action="edit" data-id="${esc(item.id)}">Editar</button>
+          <button class="btn btn-danger btn-sm" data-action="delete" data-id="${esc(item.id)}">Eliminar</button>
+        </td>
+      </tr>
     `;
-    tbody.appendChild(tr);
-  });
+  }).join("");
 }
 
-document.getElementById("inventory-search").addEventListener("input", (e) => {
-  renderInventoryTable(e.target.value);
-});
-
-
-function renderAppointmentsTable(dateFilter = "", nameFilter = "") {
+// ============================
+// CITAS
+// ============================
+function renderAppointmentsTable() {
   const tbody = document.getElementById("appointments-table-body");
-  tbody.innerHTML = "";
 
-  let filtered = appointments;
+  const dateFilter = inputValue("appointments-filter-date");
+  const nameFilter = inputValue("appointment-search").toLowerCase().trim();
+  const show = {
+    programada: document.getElementById("filter-status-programada").checked,
+    completada: document.getElementById("filter-status-completada").checked,
+    cancelada: document.getElementById("filter-status-cancelada").checked
+  };
 
-  // ============================
-  // FILTRO POR FECHA
-  // ============================
-  if (dateFilter) {
-    filtered = filtered.filter(a => a.date === dateFilter);
+  let list = appointments.filter(a => show[a.status] !== false);
+
+  if (dateFilter) list = list.filter(a => a.date === dateFilter);
+
+  if (nameFilter) {
+    list = list.filter(a => clientName(a.clientId, "").toLowerCase().includes(nameFilter));
   }
 
-  // ============================
-  // FILTRO POR NOMBRE
-  // ============================
-  if (nameFilter.trim() !== "") {
-    filtered = filtered.filter(app => {
-      const client = clients.find(c => c.id === app.clientId);
-      return client && client.name.toLowerCase().includes(nameFilter.toLowerCase());
-    });
+  list.sort(byDateTimeDesc);
+
+  if (!list.length) {
+    emptyRow(tbody, 8, appointments.length ? "No hay citas con estos filtros." : "Todavía no hay citas.");
+    return;
   }
-
-  // ============================
-  // FILTRO POR ESTADO
-  // ============================
-  const showProgramada =
-    document.getElementById("filter-status-programada")?.checked ?? true;
-
-  const showCompletada =
-    document.getElementById("filter-status-completada")?.checked ?? true;
-
-  const showCancelada =
-    document.getElementById("filter-status-cancelada")?.checked ?? true;
-
-  filtered = filtered.filter(app => {
-    if (app.status === "programada" && showProgramada) return true;
-    if (app.status === "completada" && showCompletada) return true;
-    if (app.status === "cancelada" && showCancelada) return true;
-    return false;
-  });
-
-  // ============================
-  // ORDENAR POR FECHA Y HORA
-  // MÁS NUEVAS ARRIBA
-  // ============================
-  filtered.sort((a, b) => {
-    const dateA = `${a.date}T${a.time}`;
-    const dateB = `${b.date}T${b.time}`;
-
-    return new Date(dateB) - new Date(dateA);
-  });
 
   const now = new Date();
 
-  filtered.forEach(app => {
-    const client = clients.find(c => c.id === app.clientId);
-    const service = services.find(s => s.id == app.serviceId);
+  tbody.innerHTML = list.map(a => {
+    let rowClass = "";
+    if (a.status === "completada") rowClass = "row-completed";
+    else if (a.status === "cancelada") rowClass = "row-cancelled";
+    else if (appointmentDateTime(a) < now) rowClass = "row-late";
 
-    // ============================
-    // PRECIO FINAL
-    // ============================
-    const finalPrice =
-      app.price !== undefined &&
-      app.price !== null &&
-      !isNaN(app.price)
-        ? Number(app.price)
-        : (service ? Number(service.price) : 0);
+    return `
+      <tr class="${rowClass}">
+        <td>${esc(formatDateMMDDYYYY(a.date))}</td>
+        <td>${esc(formatTimeTo12Hour(a.time))}</td>
+        <td>${esc(clientName(a.clientId))}</td>
+        <td>${esc(serviceName(a.serviceId))}</td>
+        <td>${esc(a.barber || "")}</td>
+        <td>${statusBadge(a.status)}</td>
+        <td>${formatMoney(getItemPrice(a))}</td>
+        <td class="buttons-cell">
+          ${a.status === "programada"
+            ? `<button class="btn btn-success btn-sm" data-action="complete" data-id="${esc(a.id)}">✓ Completar</button>`
+            : ""}
+          <button class="btn btn-secondary btn-sm" data-action="edit" data-id="${esc(a.id)}">Editar</button>
+          <button class="btn btn-light btn-sm" data-action="whatsapp" data-id="${esc(a.id)}">WhatsApp</button>
+          <button class="btn btn-danger btn-sm" data-action="delete" data-id="${esc(a.id)}">Eliminar</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
 
-    // ============================
-    // ESTADO VISUAL
-    // ============================
-    const appointmentDateTime = new Date(`${app.date}T${app.time}`);
+function slotsHtml(slots) {
+  if (slots === null) {
+    return `<div class="slot slot-none">Configura tu horario de trabajo en Configuración para ver los huecos disponibles.</div>`;
+  }
+  if (!slots.length) {
+    return `<div class="slot slot-none">Día lleno — no queda tiempo disponible.</div>`;
+  }
 
-    const isPast =
-      appointmentDateTime < now &&
-      app.status === "programada";
+  return slots.map(s => {
+    const from = minutesToHHMM(s.start);
+    const label = `${formatTimeTo12Hour(from)} – ${formatTimeTo12Hour(minutesToHHMM(s.end))} · ${s.minutes} min`;
 
-    const isCompleted =
-      app.status === "completada";
-
-    const isCanceled =
-      app.status === "cancelada";
-
-    let rowColor = "";
-
-    if (isCompleted) {
-      rowColor = "background-color:#d4f8d4;";
+    if (s.minutes < 20) {
+      return `<div class="slot slot-none">${esc(label)} · sin cupo</div>`;
     }
-    else if (isCanceled) {
-      rowColor = "background-color:#f0f0f0;color:#777;";
-    }
-    else if (isPast) {
-      rowColor = "background-color:#ffd6d6;";
-    }
+    const cls = s.minutes < 30 ? "slot-tight" : "slot-ok";
+    const note = s.minutes < 30 ? " · ajustado" : "";
+    return `<button type="button" class="slot ${cls}" data-time="${from}">${esc(label)}${note}</button>`;
+  }).join("");
+}
 
-    const tr = document.createElement("tr");
-    tr.setAttribute("style", rowColor);
+function renderSlots(dateStr, excludeId = null) {
+  const div = document.getElementById("appointment-slots");
+  if (!dateStr) {
+    div.innerHTML = "";
+    return;
+  }
+  div.innerHTML = `<div class="slots-title">Huecos disponibles (toca uno para usar esa hora)</div>` +
+    slotsHtml(getFreeSlots(dateStr, excludeId));
+}
 
-    tr.innerHTML = `
-      <td>${formatDateMMDDYYYY(app.date)}</td>
-      <td>${formatTimeTo12Hour(app.time)}</td>
-      <td>${client ? client.name : "—"}</td>
-      <td>${service ? service.name : "—"}</td>
-      <td>${app.barber}</td>
-      <td>${app.status}</td>
-      <td>$${finalPrice.toFixed(2)}</td>
-      <td>
-        <button class="small" data-action="edit" data-id="${app.id}">
-          Editar
-        </button>
+// ============================
+// CORTES
+// ============================
+function getCutRecords() {
+  return [
+    ...walkinCuts.map(w => ({ ...w, type: "walkin" })),
+    ...appointments.filter(a => a.status === "completada").map(a => ({ ...a, type: "cita" }))
+  ];
+}
 
-        <button class="small" data-action="delete" data-id="${app.id}">
-          Eliminar
-        </button>
+function renderCutsToday() {
+  const tbody = document.getElementById("cuts-today-table");
+  const today = todayStr();
 
-        <button class="small whatsapp-btn" data-id="${app.id}">
-          WhatsApp
-        </button>
+  const list = getCutRecords().filter(r => r.date === today).sort(byTime);
+
+  if (!list.length) {
+    emptyRow(tbody, 6, "Todavía no hay cortes hoy.");
+    return;
+  }
+
+  tbody.innerHTML = list.map(r => `
+    <tr>
+      <td>${esc(formatTimeTo12Hour(r.time))}</td>
+      <td>${typeBadge(r.type)}</td>
+      <td>${esc(clientName(r.clientId, "Walk-in"))}</td>
+      <td>${esc(serviceName(r.serviceId))}</td>
+      <td>${esc(r.barber || "")}</td>
+      <td>${formatMoney(getItemPrice(r))}</td>
+    </tr>
+  `).join("");
+}
+
+function renderCutsHistory() {
+  const tbody = document.getElementById("cuts-history-table");
+  const dateFilter = inputValue("cuts-filter-date");
+  const nameFilter = inputValue("cuts-search").toLowerCase().trim();
+
+  let list = getCutRecords();
+  if (dateFilter) list = list.filter(r => r.date === dateFilter);
+  if (nameFilter) {
+    list = list.filter(r => clientName(r.clientId, "Walk-in").toLowerCase().includes(nameFilter));
+  }
+  list.sort(byDateTimeDesc);
+
+  if (!list.length) {
+    emptyRow(tbody, 8, "No hay cortes con estos filtros.");
+    return;
+  }
+
+  tbody.innerHTML = list.map(r => `
+    <tr>
+      <td>${esc(formatDateMMDDYYYY(r.date))}</td>
+      <td>${esc(formatTimeTo12Hour(r.time))}</td>
+      <td>${typeBadge(r.type)}</td>
+      <td>${esc(clientName(r.clientId, "Walk-in"))}</td>
+      <td>${esc(serviceName(r.serviceId))}</td>
+      <td>${esc(r.barber || "")}</td>
+      <td>${formatMoney(getItemPrice(r))}</td>
+      <td class="buttons-cell">
+        <button class="btn btn-danger btn-sm" data-action="delete-cut" data-id="${esc(r.id)}" data-type="${r.type}">Eliminar</button>
       </td>
-    `;
-
-    tbody.appendChild(tr);
-  });
+    </tr>
+  `).join("");
 }
 
+// ============================
+// DASHBOARD
+// ============================
+function renderHeaderStats() {
+  const today = todayStr();
+  const todayCount = appointments.filter(a => a.date === today && a.status !== "cancelada").length;
 
-
-function refreshAppointmentsTable() {
-  const dateFilter = document.getElementById("appointments-filter-date").value;
-  const nameFilter = document.getElementById("appointment-search").value;
-  renderAppointmentsTable(dateFilter, nameFilter);
+  document.getElementById("summary-today-appointments").textContent = todayCount;
+  document.getElementById("summary-today-income").textContent = formatMoney(calculateEstimatedIncomeToday());
+  document.getElementById("summary-clients-count").textContent = clients.length;
 }
-
-
-document.getElementById("appointment-search").addEventListener("input", (e) => {
-  const date = document.getElementById("appointments-filter-date").value;
-  renderAppointmentsTable(date, e.target.value);
-});
-
-function renderDashboard() {
-  const today = new Date().toLocaleDateString("en-CA");
-
-  const todayAppointments = appointments.filter(a => a.date === today);
-  const summaryAppointments = document.getElementById("summary-today-appointments");
-  const summaryIncome = document.getElementById("summary-today-income");
-  const summaryClients = document.getElementById("summary-clients-count");
-
-  summaryAppointments.textContent = `Citas hoy: ${todayAppointments.length}`;
-
-  // ⭐ INGRESOS REALES (precio personalizado o normal)
-  const totalIncome = todayAppointments.reduce((sum, app) => {
-    const service = services.find(s => s.id == app.serviceId);
-
-    const finalPrice =
-      app.price !== undefined && app.price !== null
-        ? app.price
-        : (service ? service.price : 0);
-
-    return sum + finalPrice;
-  }, 0);
-
-  summaryIncome.textContent = `Ingresos estimados: $${totalIncome.toFixed(2)}`;
-  summaryClients.textContent = `Clientes registrados: ${clients.length}`;
-
-  const tbody = document.getElementById("dashboard-today-appointments-body");
-  tbody.innerHTML = "";
-  todayAppointments.forEach(app => {
-    const client = clients.find(c => c.id === app.clientId);
-    const service = services.find(s => s.id == app.serviceId);
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${formatTimeTo12Hour(app.time)}</td>
-      <td>${client ? client.name : "—"}</td>
-      <td>${service ? service.name : "—"}</td>
-      <td>${app.barber}</td>
-      <td>${app.status}</td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  const alertsList = document.getElementById("dashboard-alerts-list");
-  alertsList.innerHTML = "";
-  inventory
-    .filter(item => item.qty <= item.min)
-    .forEach(item => {
-      const li = document.createElement("li");
-      li.textContent = `Inventario bajo: ${item.name} (stock ${item.qty}, mínimo ${item.min})`;
-      alertsList.appendChild(li);
-    });
-
-  const topServicesList = document.getElementById("dashboard-top-services-list");
-  topServicesList.innerHTML = "";
-  const counts = {};
-  appointments.forEach(app => {
-    const service = services.find(s => s.id == app.serviceId);
-    if (!service) return;
-    counts[service.name] = (counts[service.name] || 0) + 1;
-  });
-  Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .forEach(([name, count]) => {
-      const li = document.createElement("li");
-      li.textContent = `${name}: ${count} citas`;
-      topServicesList.appendChild(li);
-    });
-
-  renderDashboardIncome();
-}
-
 
 function renderDashboardIncome() {
-  const div = document.getElementById("dashboard-income-today");
   const r = calculateTodayIncome();
-
-  div.innerHTML = `
-    Total del día: <strong>$${r.totalGeneral.toFixed(2)}</strong><br>
-    Citas completadas: ${r.citasCount} ($${r.citasTotal.toFixed(2)})<br>
-    Walk-ins: ${r.walkinCount} ($${r.walkinTotal.toFixed(2)})
+  document.getElementById("dashboard-income-today").innerHTML = `
+    <div class="income-total">${formatMoney(r.totalGeneral)}</div>
+    <div class="income-row"><span>Citas completadas (${r.citasCount})</span><span>${formatMoney(r.citasTotal)}</span></div>
+    <div class="income-row"><span>Cortes rápidos (${r.walkinCount})</span><span>${formatMoney(r.walkinTotal)}</span></div>
   `;
 }
 
-function formatTimeTo12Hour(time24) {
-  let [hour, minute] = time24.split(":");
-  hour = parseInt(hour, 10);
+function renderTodayAppointments() {
+  const tbody = document.getElementById("dashboard-today-appointments-body");
+  const today = todayStr();
+  const list = appointments.filter(a => a.date === today).sort(byTime);
 
-  const ampm = hour >= 12 ? "pm" : "am";
-  hour = hour % 12 || 12;
+  if (!list.length) {
+    emptyRow(tbody, 5, "No hay citas para hoy.");
+    return;
+  }
 
-  return `${hour}:${minute} ${ampm}`;
+  tbody.innerHTML = list.map(a => `
+    <tr>
+      <td>${esc(formatTimeTo12Hour(a.time))}</td>
+      <td>${esc(clientName(a.clientId))}</td>
+      <td>${esc(serviceName(a.serviceId))}</td>
+      <td>${esc(a.barber || "")}</td>
+      <td>${statusBadge(a.status)}</td>
+    </tr>
+  `).join("");
 }
 
-function formatDateMMDDYYYY(dateStr) {
-  if (!dateStr) return "";
-  const [yyyy, mm, dd] = dateStr.split("-");
-  return `${mm}-${dd}-${yyyy}`;
+function renderLowInventory() {
+  const items = inventory
+    .filter(i => toNumber(i.qty) <= toNumber(i.min))
+    .map(i => `<li class="alert-item alert-warning">
+      <span><strong>${esc(i.name)}</strong> — stock ${esc(toNumber(i.qty))} (mínimo ${esc(toNumber(i.min))})</span>
+    </li>`);
+  renderList(document.getElementById("dashboard-alerts-list"), items, "Todo el inventario está bien.");
 }
 
-function refreshQuickAlerts() {
-  const quickAlerts = document.getElementById("dashboard-quick-alerts");
-  quickAlerts.innerHTML = "";
+function renderTopServicesDashboard() {
+  const items = getTopServices(30).slice(0, 5)
+    .map(([name, count]) => `<li><span>${esc(name)}</span><span class="list-count">${count}</span></li>`);
+  renderList(document.getElementById("dashboard-top-services-list"), items, "Sin datos todavía.");
+}
+
+function renderQuickAlerts() {
+  const now = new Date();
+  const items = [];
+
+  getUpcomingAppointments(60).forEach(a => {
+    const mins = Math.max(1, Math.round((appointmentDateTime(a) - now) / 60000));
+    items.push(`<li class="alert-item alert-info">
+      <span>⏰ En ${mins} min: <strong>${esc(clientName(a.clientId, "Cliente"))}</strong> (${esc(formatTimeTo12Hour(a.time))})</span>
+      <button class="btn btn-success btn-sm" data-action="whatsapp" data-id="${esc(a.id)}">WhatsApp</button>
+    </li>`);
+  });
+
+  getLateAppointmentsToday().forEach(a => {
+    items.push(`<li class="alert-item alert-danger">
+      <span>Retrasada: <strong>${esc(clientName(a.clientId, "Cliente"))}</strong> (${esc(formatTimeTo12Hour(a.time))})</span>
+    </li>`);
+  });
 
   getCancelledAppointmentsToday().forEach(a => {
-    const client = clients.find(c => c.id === a.clientId);
-    const li = document.createElement("li");
-    li.textContent = `Cita cancelada: ${formatTimeTo12Hour(a.time)} - Cliente ${client ? client.name : "Desconocido"}`;
-    quickAlerts.appendChild(li);
+    items.push(`<li class="alert-item alert-muted">
+      <span>Cancelada: ${esc(clientName(a.clientId, "Cliente"))} (${esc(formatTimeTo12Hour(a.time))})</span>
+    </li>`);
   });
 
-  getLateAppointments().forEach(a => {
-    const client = clients.find(c => c.id === a.clientId);
-    const li = document.createElement("li");
-    li.textContent = `Cita retrasada: ${formatTimeTo12Hour(a.time)} - Cliente ${client?.name || "Desconocido"} (${formatDateMMDDYYYY(a.date)})`;
-    quickAlerts.appendChild(li);
-  });
+  const pastOpen = getPastOpenAppointments().length;
+  if (pastOpen > 0) {
+    items.push(`<li class="alert-item alert-warning">
+      <span>${pastOpen} cita(s) de días anteriores siguen como "Programada". Márcalas como completadas o canceladas en Citas.</span>
+    </li>`);
+  }
 
+  renderList(document.getElementById("dashboard-quick-alerts"), items, "Sin alertas por ahora.");
 }
 
-function refreshNewClientsToday() {
-  const newClientsList = document.getElementById("dashboard-new-clients-list");
-  newClientsList.innerHTML = "";
-
-  const today = new Date().toLocaleDateString("en-CA");
-
-  clients
-    .filter(c => c.createdDate === today)
-    .forEach(c => {
-      const li = document.createElement("li");
-      li.textContent = `${c.name} (${c.phone})`;
-      newClientsList.appendChild(li);
-    });
+function renderNewClientsToday() {
+  const items = getNewClientsToday()
+    .map(c => `<li><span>${esc(c.name)}</span><span class="list-muted">${esc(c.phone)}</span></li>`);
+  renderList(document.getElementById("dashboard-new-clients-list"), items, "Sin clientes nuevos hoy.");
 }
 
-function populateAppointmentServicesSelect() {
-  const select = document.getElementById("appointment-service");
-  select.innerHTML = '<option value="">Selecciona servicio</option>';
-
-  services.forEach(service => {
-    const opt = document.createElement("option");
-    opt.value = service.id;
-    opt.textContent = service.name;
-    select.appendChild(opt);
-  });
+function renderDashboard() {
+  renderHeaderStats();
+  renderDashboardIncome();
+  renderTodayAppointments();
+  renderLowInventory();
+  renderTopServicesDashboard();
+  renderQuickAlerts();
+  renderNewClientsToday();
 }
 
-function editService(id) {
-  const s = services.find(x => x.id == id);
-  if (!s) return;
+// ============================
+// REPORTES
+// ============================
+function renderReports() {
+  const topServices = getTopServices().slice(0, 10)
+    .map(([name, count]) => `<li><span>${esc(name)}</span><span class="list-count">${count}</span></li>`);
+  renderList(document.getElementById("report-top-services-list"), topServices, "Sin datos todavía.");
 
-  document.getElementById("service-id").value = s.id;
-  document.getElementById("service-name").value = s.name;
-  document.getElementById("service-duration").value = s.duration;
-  document.getElementById("service-price").value = s.price;
-  document.getElementById("service-active").checked = s.active;
+  const topClients = getTopClients().slice(0, 10)
+    .map(([name, count]) => `<li><span>${esc(name)}</span><span class="list-count">${count} visitas</span></li>`);
+  renderList(document.getElementById("report-top-clients-list"), topClients, "Sin datos todavía.");
 }
 
-async function renderCalendar() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
+function renderIncomeReport(fromDate, toDate) {
+  const r = generateIncomeReport(fromDate, toDate);
+  document.getElementById("report-income-summary").innerHTML = `
+    <div class="income-row"><span>Citas completadas (${r.citasCount})</span><span>${formatMoney(r.citasTotal)}</span></div>
+    <div class="income-row"><span>Cortes rápidos (${r.walkinCount})</span><span>${formatMoney(r.walkinTotal)}</span></div>
+    <div class="income-row income-row-total"><span>Total general</span><span>${formatMoney(r.totalGeneral)}</span></div>
+  `;
+}
 
+// ============================
+// FOTOS DE SERVICIOS
+// ============================
+const SERVICE_PHOTOS = [
+  { name: "Foto 1", url: "Man1.png" },
+  { name: "Foto 2", url: "Man2.png" },
+  { name: "Foto 3", url: "Man3.png" },
+  { name: "Foto 4", url: "Woman1.png" }
+];
+
+function renderServicePhotos() {
+  const container = document.getElementById("service-photos-container");
+  container.innerHTML = SERVICE_PHOTOS.map((photo, index) => `
+    <figure class="photo-card" data-index="${index}">
+      <img src="${esc(photo.url)}" alt="${esc(photo.name)}" class="photo-thumb" loading="lazy" />
+      <figcaption>${esc(photo.name)}</figcaption>
+    </figure>
+  `).join("");
+}
+
+// ============================
+// CALENDARIO
+// ============================
+const calendarState = { year: new Date().getFullYear(), month: new Date().getMonth() };
+
+function renderCalendar() {
+  const { year, month } = calendarState;
   const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const today = todayStr();
 
-  const calendarTitle = document.getElementById("calendar-title");
-  const calendarGrid = document.getElementById("calendar-grid");
+  const title = firstDay.toLocaleString("es-MX", { month: "long", year: "numeric" });
+  document.getElementById("calendar-title").textContent = title.charAt(0).toUpperCase() + title.slice(1);
 
-  calendarTitle.textContent = `${now.toLocaleString("es-MX", { month: "long" })} ${year}`;
-  calendarGrid.innerHTML = "";
+  const counts = {};
+  appointments
+    .filter(a => a.status !== "cancelada")
+    .forEach(a => { counts[a.date] = (counts[a.date] || 0) + 1; });
 
-  // 🔥 FIX: ahora sí es un arreglo
-  const appointments = await getAppointments();
+  let html = "";
+  for (let i = 0; i < firstDay.getDay(); i++) {
+    html += `<div class="calendar-day calendar-day-empty"></div>`;
+  }
 
-  const grouped = {};
-  appointments.forEach(a => {
-    const d = a.date;
-    if (!grouped[d]) grouped[d] = [];
-    grouped[d].push(a);
-  });
-
-  for (let day = 1; day <= lastDay.getDate(); day++) {
+  for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    const count = grouped[dateStr]?.length || 0;
+    const count = counts[dateStr] || 0;
 
-    const div = document.createElement("div");
-    div.className = "calendar-day";
+    const classes = ["calendar-day"];
+    if (count > 0) classes.push("calendar-day-has-appointments");
+    if (dateStr === today) classes.push("calendar-day-today");
 
-    // ⭐ Si el día tiene citas, resaltarlo
-    if (count > 0) {
-      div.classList.add("calendar-day-has-appointments");
-    }
-
-    // ⭐ Mostrar solo si hay citas
-    let label = `<strong>${day}</strong>`;
-    if (count > 0) {
-      label += `<br><small>${count} citas</small>`;
-    }
-
-    div.innerHTML = label;
-
-    div.addEventListener("click", () => openDayDetails(dateStr));
-
-    calendarGrid.appendChild(div);
-  }
-}
-
-
-
-
-async function openDayDetails(dateStr) {
-  // 🔥 Cerrar el calendario al abrir detalles
-  document.getElementById("calendar-modal").style.display = "none";
-
-  const modal = document.getElementById("day-details-modal");
-  const title = document.getElementById("day-title");
-  const list = document.getElementById("day-appointments");
-  const availability = document.getElementById("day-availability");
-
-  // Abrir modal de detalles
-  modal.style.display = "block";
-  title.textContent = `Citas del ${formatDateMMDDYYYY(dateStr)}`;
-
-  // Obtener citas del día
-  const appointments = (await getAppointments()).filter(a => a.date === dateStr);
-  const clients = await getClients();
-
-  list.innerHTML = "";
-
-  appointments.forEach(a => {
-    const client = clients.find(c => c.id === a.clientId);
-    const div = document.createElement("div");
-    div.innerHTML = `
-      <strong>${formatTimeTo12Hour(a.time)}</strong> - 
-      ${client?.name || "Cliente desconocido"} - 
-      ${a.serviceName || "Servicio"}
+    html += `
+      <button type="button" class="${classes.join(" ")}" data-date="${dateStr}">
+        <strong>${day}</strong>
+        ${count > 0 ? `<small>${count} cita${count === 1 ? "" : "s"}</small>` : ""}
+      </button>
     `;
-    list.appendChild(div);
-  });
-
-  const freeSlots = calculateAvailability(appointments);
-  availability.innerHTML = freeSlots.map(s => `<div>${s}</div>`).join("");
-}
-
-
-
-document.getElementById("close-day-details").addEventListener("click", () => {
-  // Cerrar modal de detalles
-  document.getElementById("day-details-modal").style.display = "none";
-
-  // Volver a abrir calendario
-  document.getElementById("calendar-modal").style.display = "block";
-
-  // Recargar calendario como siempre
-  renderCalendar();
-});
-
-
-function calculateAvailability(appointments, serviceDuration = 30) {
-  // 🔥 Leer horarios reales desde Firestore
-  const [startH, startM] = workStartTime.split(":").map(Number);
-  const [endH, endM] = workEndTime.split(":").map(Number);
-
-  const start = startH * 60 + startM;
-  const end = endH * 60 + endM;
-
-  // Convertir citas a intervalos ocupados
-  const busy = appointments.map(a => {
-    const service = services.find(s => s.id === a.serviceId);
-    const duration = service ? Number(service.duration) : 0;
-
-    const [h, m] = a.time.split(":").map(Number);
-    const appStart = h * 60 + m;
-    const appEnd = appStart + duration;
-
-    return { start: appStart, end: appEnd };
-  });
-
-  busy.sort((a, b) => a.start - b.start);
-
-  const freeSlots = [];
-  let cursor = start;
-
-  busy.forEach(b => {
-    if (cursor < b.start) {
-      const gapStart = cursor;
-      const gapEnd = b.start;
-      const gapMinutes = gapEnd - gapStart;
-
-      freeSlots.push({
-        start: gapStart,
-        end: gapEnd,
-        minutes: gapMinutes,
-        fits: gapMinutes >= serviceDuration,
-        adjusted: gapMinutes >= serviceDuration && gapMinutes < serviceDuration + 10
-      });
-    }
-    cursor = Math.max(cursor, b.end);
-  });
-
-  if (cursor < end) {
-    const gapStart = cursor;
-    const gapEnd = end;
-    const gapMinutes = gapEnd - gapStart;
-
-    freeSlots.push({
-      start: gapStart,
-      end: gapEnd,
-      minutes: gapMinutes,
-      fits: gapMinutes >= serviceDuration,
-      adjusted: gapMinutes >= serviceDuration && gapMinutes < serviceDuration + 10
-    });
   }
 
-  return freeSlots.map(slot => {
-    const sH = String(Math.floor(slot.start / 60)).padStart(2, "0");
-    const sM = String(slot.start % 60).padStart(2, "0");
-    const eH = String(Math.floor(slot.end / 60)).padStart(2, "0");
-    const eM = String(slot.end % 60).padStart(2, "0");
-
-    const label = `${formatTimeTo12Hour(`${sH}:${sM}`)} – ${formatTimeTo12Hour(`${eH}:${eM}`)} (${slot.minutes} min)`;
-
-    if (!slot.fits) {
-      return `<div style="color:gray">${label} — No disponible</div>`;
-    }
-
-    if (slot.adjusted) {
-      return `<div style="color:red">${label} — Disponible (ajustado)</div>`;
-    }
-
-    return `<div style="color:green">${label} — Disponible</div>`;
-  });
+  document.getElementById("calendar-grid").innerHTML = html;
 }
 
+function openDayDetails(dateStr) {
+  hideModal("calendar-modal");
+  showModal("day-details-modal");
 
+  document.getElementById("day-title").textContent = `Citas del ${formatDateMMDDYYYY(dateStr)}`;
 
+  const list = appointments.filter(a => a.date === dateStr).sort(byTime);
+  const container = document.getElementById("day-appointments");
+
+  container.innerHTML = list.length
+    ? list.map(a => `
+        <div class="day-appointment">
+          <strong>${esc(formatTimeTo12Hour(a.time))}</strong>
+          <span>${esc(clientName(a.clientId, "Cliente desconocido"))}</span>
+          <span>${esc(serviceName(a.serviceId))}</span>
+          ${statusBadge(a.status)}
+        </div>
+      `).join("")
+    : `<p class="list-empty">No hay citas este día.</p>`;
+
+  document.getElementById("day-availability").innerHTML = slotsHtml(getFreeSlots(dateStr))
+    .replace(/<button type="button"/g, '<div').replace(/<\/button>/g, "</div>");
+}
+
+// ============================
+// MODALES DEL CALENDARIO ARRASTRABLES
+// ============================
 function makeCalendarModalsDraggable(mainModalId, detailModalId, headerId) {
-
   const mainModal = document.getElementById(mainModalId);
   const detailModal = document.getElementById(detailModalId);
   const header = document.getElementById(headerId);
-
   if (!mainModal || !detailModal || !header) return;
 
   const mainContent = mainModal.querySelector(".calendar-modal-content");
@@ -626,98 +619,47 @@ function makeCalendarModalsDraggable(mainModalId, detailModalId, headerId) {
   let offsetY = 0;
   let isDragging = false;
 
-  header.style.cursor = "move";
-
-  function getClientPosition(e) {
+  function getPos(e) {
     if (e.touches && e.touches.length > 0) {
-      return {
-        x: e.touches[0].clientX,
-        y: e.touches[0].clientY
-      };
+      return { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }
+    return { x: e.clientX, y: e.clientY };
+  }
 
+  function clamp(content, left, top) {
+    const maxLeft = Math.max(0, window.innerWidth - content.offsetWidth);
+    const maxTop = Math.max(0, window.innerHeight - content.offsetHeight);
     return {
-      x: e.clientX,
-      y: e.clientY
+      left: Math.max(0, Math.min(left, maxLeft)),
+      top: Math.max(0, Math.min(top, maxTop))
     };
   }
 
   function startDrag(e) {
+    if (e.target.closest("button")) return;
+    if (window.innerWidth <= 768) return; // en celular no se arrastra
 
-    if (e.target.classList.contains("calendar-close-btn")) return;
-
-    const pos = getClientPosition(e);
+    const pos = getPos(e);
     const rect = mainContent.getBoundingClientRect();
-
     offsetX = pos.x - rect.left;
     offsetY = pos.y - rect.top;
-
     isDragging = true;
-
-    // Evita scroll accidental en móviles
-    if (e.cancelable) {
-      e.preventDefault();
-    }
+    if (e.cancelable) e.preventDefault();
   }
 
   function duringDrag(e) {
-
     if (!isDragging) return;
+    if (e.cancelable) e.preventDefault();
 
-    // Bloquea el scroll durante el drag
-    if (e.cancelable) {
-      e.preventDefault();
-    }
+    const pos = getPos(e);
+    const main = clamp(mainContent, pos.x - offsetX, pos.y - offsetY);
+    mainContent.style.left = `${main.left}px`;
+    mainContent.style.top = `${main.top}px`;
 
-    const pos = getClientPosition(e);
-
-    let newLeft = pos.x - offsetX;
-    let newTop = pos.y - offsetY;
-
-    // Mantener dentro de la pantalla
-    const maxLeft =
-      window.innerWidth - mainContent.offsetWidth;
-
-    const maxTop =
-      window.innerHeight - mainContent.offsetHeight;
-
-    newLeft = Math.max(
-      0,
-      Math.min(newLeft, maxLeft)
-    );
-
-    newTop = Math.max(
-      0,
-      Math.min(newTop, maxTop)
-    );
-
-    mainContent.style.left = `${newLeft}px`;
-    mainContent.style.top = `${newTop}px`;
-
-    // Si el otro modal está abierto lo mueve junto
-    if (detailModal.style.display === "block") {
-
-      let detailLeft = newLeft + 40;
-      let detailTop = newTop + 40;
-
-      const detailMaxLeft =
-        window.innerWidth - detailContent.offsetWidth;
-
-      const detailMaxTop =
-        window.innerHeight - detailContent.offsetHeight;
-
-      detailLeft = Math.max(
-        0,
-        Math.min(detailLeft, detailMaxLeft)
-      );
-
-      detailTop = Math.max(
-        0,
-        Math.min(detailTop, detailMaxTop)
-      );
-
-      detailContent.style.left = `${detailLeft}px`;
-      detailContent.style.top = `${detailTop}px`;
+    if (!detailModal.classList.contains("hidden")) {
+      const detail = clamp(detailContent, main.left + 40, main.top + 40);
+      detailContent.style.left = `${detail.left}px`;
+      detailContent.style.top = `${detail.top}px`;
     }
   }
 
@@ -725,40 +667,41 @@ function makeCalendarModalsDraggable(mainModalId, detailModalId, headerId) {
     isDragging = false;
   }
 
-  // Desktop
   header.addEventListener("mousedown", startDrag);
   document.addEventListener("mousemove", duringDrag);
   document.addEventListener("mouseup", stopDrag);
 
-  // Mobile
-  header.addEventListener("touchstart", startDrag, {
-    passive: false
-  });
-
-  document.addEventListener("touchmove", duringDrag, {
-    passive: false
-  });
-
+  header.addEventListener("touchstart", startDrag, { passive: false });
+  document.addEventListener("touchmove", duringDrag, { passive: false });
   document.addEventListener("touchend", stopDrag);
   document.addEventListener("touchcancel", stopDrag);
 }
 
-
 window.addEventListener("resize", () => {
-
-  document.querySelectorAll(".calendar-modal-content").forEach(modal => {
-
-    const maxLeft = window.innerWidth - modal.offsetWidth;
-    const maxTop = window.innerHeight - modal.offsetHeight;
-
-    let left = parseInt(modal.style.left) || 0;
-    let top = parseInt(modal.style.top) || 0;
-
-    left = Math.max(0, Math.min(left, maxLeft));
-    top = Math.max(0, Math.min(top, maxTop));
-
-    modal.style.left = `${left}px`;
-    modal.style.top = `${top}px`;
+  if (window.innerWidth <= 768) return;
+  document.querySelectorAll(".calendar-modal-content").forEach(content => {
+    const maxLeft = Math.max(0, window.innerWidth - content.offsetWidth);
+    const maxTop = Math.max(0, window.innerHeight - content.offsetHeight);
+    const left = Math.max(0, Math.min(parseInt(content.style.left, 10) || 0, maxLeft));
+    const top = Math.max(0, Math.min(parseInt(content.style.top, 10) || 0, maxTop));
+    if (content.style.left) content.style.left = `${left}px`;
+    if (content.style.top) content.style.top = `${top}px`;
   });
-
 });
+
+// ============================
+// REFRESCAR TODO
+// ============================
+function refreshAll() {
+  renderClientsTable();
+  renderClientsSelect();
+  renderServicesTable();
+  renderServicesSelect();
+  renderInventoryTable();
+  renderAppointmentsTable();
+  renderCutsToday();
+  renderCutsHistory();
+  renderDashboard();
+  renderReports();
+  renderServicePhotos();
+}
