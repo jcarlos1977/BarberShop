@@ -98,7 +98,7 @@ function renderClientsTable() {
   );
 
   if (!list.length) {
-    emptyRow(tbody, 5, clients.length ? "Sin resultados." : "Todavía no hay clientes registrados.");
+    emptyRow(tbody, 4, clients.length ? "Sin resultados." : "Todavía no hay clientes registrados.");
     return;
   }
 
@@ -110,14 +110,11 @@ function renderClientsTable() {
       </td>
       <td>${esc(c.phone)}</td>
       <td class="notes-cell" title="${esc(c.notes || "")}">${esc(c.notes || "")}</td>
-      <td class="buttons-cell">
-        <button class="btn btn-light btn-sm" data-action="photo-before" data-id="${esc(c.id)}">Antes</button>
-        <button class="btn btn-light btn-sm" data-action="photo-after" data-id="${esc(c.id)}">Después</button>
-      </td>
-      <td class="buttons-cell">
+      <td><div class="cell-buttons">
+        <button class="btn btn-light btn-sm" data-action="photos" data-id="${esc(c.id)}">📷 Fotos</button>
         <button class="btn btn-secondary btn-sm" data-action="edit" data-id="${esc(c.id)}">Editar</button>
         <button class="btn btn-danger btn-sm" data-action="delete" data-id="${esc(c.id)}">Eliminar</button>
-      </td>
+      </div></td>
     </tr>
   `).join("");
 }
@@ -154,6 +151,9 @@ function renderServicesTable() {
 
   const list = services.filter(s => String(s.name || "").toLowerCase().includes(filter));
 
+  // Muestra cuántos servicios hay en total
+  document.getElementById("services-count").textContent = `(${services.length})`;
+
   if (!list.length) {
     emptyRow(tbody, 5, services.length ? "Sin resultados." : "Todavía no hay servicios.");
     return;
@@ -167,10 +167,10 @@ function renderServicesTable() {
       <td>${s.active
         ? '<span class="badge badge-completada">Activo</span>'
         : '<span class="badge badge-cancelada">Inactivo</span>'}</td>
-      <td class="buttons-cell">
+      <td><div class="cell-buttons">
         <button class="btn btn-secondary btn-sm" data-action="edit" data-id="${esc(s.id)}">Editar</button>
         <button class="btn btn-danger btn-sm" data-action="delete" data-id="${esc(s.id)}">Eliminar</button>
-      </td>
+      </div></td>
     </tr>
   `).join("");
 }
@@ -222,10 +222,10 @@ function renderInventoryTable() {
         <td>${low
           ? '<span class="badge badge-cancelada">Bajo</span>'
           : '<span class="badge badge-completada">OK</span>'}</td>
-        <td class="buttons-cell">
+        <td><div class="cell-buttons">
           <button class="btn btn-secondary btn-sm" data-action="edit" data-id="${esc(item.id)}">Editar</button>
           <button class="btn btn-danger btn-sm" data-action="delete" data-id="${esc(item.id)}">Eliminar</button>
-        </td>
+        </div></td>
       </tr>
     `;
   }).join("");
@@ -277,14 +277,14 @@ function renderAppointmentsTable() {
         <td>${esc(a.barber || "")}</td>
         <td>${statusBadge(a.status)}</td>
         <td>${formatMoney(getItemPrice(a))}</td>
-        <td class="buttons-cell">
+        <td><div class="cell-buttons">
           ${a.status === "programada"
             ? `<button class="btn btn-success btn-sm" data-action="complete" data-id="${esc(a.id)}">✓ Completar</button>`
             : ""}
           <button class="btn btn-secondary btn-sm" data-action="edit" data-id="${esc(a.id)}">Editar</button>
           <button class="btn btn-light btn-sm" data-action="whatsapp" data-id="${esc(a.id)}">WhatsApp</button>
           <button class="btn btn-danger btn-sm" data-action="delete" data-id="${esc(a.id)}">Eliminar</button>
-        </td>
+        </div></td>
       </tr>
     `;
   }).join("");
@@ -380,9 +380,9 @@ function renderCutsHistory() {
       <td>${esc(serviceName(r.serviceId))}</td>
       <td>${esc(r.barber || "")}</td>
       <td>${formatMoney(getItemPrice(r))}</td>
-      <td class="buttons-cell">
+      <td><div class="cell-buttons">
         <button class="btn btn-danger btn-sm" data-action="delete-cut" data-id="${esc(r.id)}" data-type="${r.type}">Eliminar</button>
-      </td>
+      </div></td>
     </tr>
   `).join("");
 }
