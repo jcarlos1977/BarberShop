@@ -179,7 +179,6 @@
                     <th>Nombre</th>
                     <th>Teléfono</th>
                     <th>Notas</th>
-                    <th>Fotos</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
@@ -380,7 +379,8 @@
 
           <div class="card">
             <div class="card-head">
-              <h3>Listado de servicios</h3>
+              <h3>Listado de servicios <span id="services-count" class="list-muted"></span></h3>
+              <button type="button" id="services-add-defaults-btn" class="btn btn-secondary btn-sm">+ Servicios predeterminados</button>
             </div>
 
             <input type="text" id="service-search" class="search-input" placeholder="Buscar servicio por nombre..." />
@@ -558,7 +558,7 @@
   </div>
 
   <!-- ===================== MODAL FOTO DE SERVICIO ===================== -->
-  <div id="photo-modal" class="modal modal-dark hidden">
+  <div id="photo-modal" class="modal modal-dark modal-top hidden">
     <button type="button" id="photo-modal-close" class="viewer-close" aria-label="Cerrar">&times;</button>
     <div class="viewer">
       <img id="photo-modal-img" class="viewer-img" alt="" />
@@ -574,17 +574,17 @@
         <button type="button" id="client-photo-close" class="modal-close" aria-label="Cerrar">&times;</button>
       </div>
 
-      <div class="photo-preview">
-        <img id="client-photo-img" class="photo-preview-img hidden" alt="" />
-        <p id="client-photo-empty" class="photo-preview-empty">Cargando...</p>
+      <div class="photo-tabs">
+        <button type="button" id="photo-tab-before" class="photo-tab active" data-type="before">Antes</button>
+        <button type="button" id="photo-tab-after" class="photo-tab" data-type="after">Después</button>
       </div>
 
-      <input type="file" id="client-photo-input" accept="image/*" class="photo-input" />
+      <p class="field-hint">Toca un recuadro para tomar o subir la foto de ese lado. Toca una foto para verla en grande.</p>
 
-      <div class="form-actions">
-        <button type="button" id="client-photo-save" class="btn btn-primary">Guardar foto</button>
-        <button type="button" id="client-photo-delete" class="btn btn-danger">Eliminar foto</button>
-      </div>
+      <div id="client-photo-grid" class="photo-grid"></div>
+
+      <!-- Selector de archivo oculto (lo abre cada recuadro) -->
+      <input type="file" id="client-photo-input" accept="image/*" class="hidden" />
     </div>
   </div>
 
