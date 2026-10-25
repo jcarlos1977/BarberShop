@@ -611,10 +611,12 @@ td.empty {
   white-space: normal;
 }
 
-.buttons-cell {
+/* Los botones van dentro de un div para no romper las columnas de la tabla */
+.cell-buttons {
   display: flex;
   gap: 6px;
   align-items: center;
+  flex-wrap: nowrap;
 }
 
 .notes-cell {
@@ -864,40 +866,123 @@ button.slot:hover {
   cursor: pointer;
 }
 
-/* Fotos antes / después */
-.modal-photo {
-  max-width: 640px;
+/* El visor de fotos va encima de los demás modales */
+.modal-top {
+  z-index: 1100;
 }
 
-.photo-preview {
+/* Fotos antes / después (4 lados) */
+.modal-photo {
+  max-width: 720px;
+}
+
+.photo-tabs {
+  display: flex;
+  gap: 6px;
   background: var(--surface-alt);
   border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  margin: 10px 0 6px;
+}
+
+.photo-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.photo-tab.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.photo-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.photo-slot-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.photo-slot-box {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  background: var(--surface-alt);
+  border: 2px dashed var(--border);
   border-radius: var(--radius);
-  height: min(55vh, 460px);
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  margin: 12px 0;
-}
-
-.photo-preview-img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-}
-
-.photo-preview-empty {
+  text-align: center;
   color: var(--text-muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  width: 100%;
 }
 
-.photo-input {
+.photo-slot-box:hover {
+  border-color: var(--primary);
+}
+
+.photo-slot-box.has-photo {
+  border-style: solid;
+}
+
+.photo-slot-box img {
   width: 100%;
-  padding: 10px;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface-alt);
-  font-size: 0.9rem;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-slot-busy {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.photo-slot-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.photo-slot-actions .btn {
+  flex: 1;
+}
+
+.photo-grid-message {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--text-muted);
+  padding: 30px 0;
 }
 
 /* ============================
