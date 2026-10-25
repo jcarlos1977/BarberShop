@@ -293,12 +293,8 @@ function setupClients() {
         }
         break;
 
-      case "photo-before":
+      case "photos":
         openClientPhotoModal(id, "before");
-        break;
-
-      case "photo-after":
-        openClientPhotoModal(id, "after");
         break;
     }
   });
@@ -641,6 +637,31 @@ function setupServices() {
   document.getElementById("service-form-reset").addEventListener("click", resetServiceForm);
   document.getElementById("service-search").addEventListener("input", renderServicesTable);
 
+  // Agrega los servicios predeterminados que falten (no toca los que ya tienes)
+  document.getElementById("services-add-defaults-btn").addEventListener("click", async e => {
+    const existing = new Set(services.map(s => String(s.name || "").trim().toLowerCase()));
+    const missingCount = DEFAULT_SERVICES.filter(s => !existing.has(s.name.toLowerCase())).length;
+
+    if (!missingCount) {
+      showToast("Ya tienes todos los servicios predeterminados.", "info");
+      return;
+    }
+    if (!confirm(`Se agregarán ${missingCount} servicios que te faltan. Los que ya tienes no se cambian. ¿Continuar?`)) return;
+
+    const button = e.currentTarget;
+    setBusy(button, true, "Agregando...");
+    try {
+      const added = await addMissingDefaultServices();
+      refreshAll();
+      showToast(`Se agregaron ${added} servicios.`);
+    } catch (err) {
+      console.error(err);
+      showToast("No se pudieron agregar los servicios.", "error");
+    } finally {
+      setBusy(button, false);
+    }
+  });
+
   document.getElementById("services-table-body").addEventListener("click", async e => {
     const btn = e.target.closest("button[data-action]");
     if (!btn) return;
@@ -834,107 +855,184 @@ function setupServicePhotos() {
 // =====================================================
 // FOTOS ANTES / DESPUÉS
 // =====================================================
-let currentPhoto = { clientId: null, type: null };
+// Estado del modal de fotos
+let photoState = {
+  clientId: null,
+  type: "before",     // "before" o "after"
+  photos: null,       // { before: {front, back, left, right}, after: {...} }
+  pendingSide: null,  // lado que se está subiendo
+  busySide: null,     // lado que se está guardando o eliminando
+  busyText: ""        // "Guardando..." o "Eliminando..."
+};
 
-function showClientPhoto(src, emptyText = "Este cliente no tiene foto todavía.") {
-  const img = document.getElementById("client-photo-img");
-  const empty = document.getElementById("client-photo-empty");
-
-  if (src) {
-    img.src = src;
-    img.classList.remove("hidden");
-    empty.classList.add("hidden");
-  } else {
-    img.removeAttribute("src");
-    img.classList.add("hidden");
-    empty.textContent = emptyText;
-    empty.classList.remove("hidden");
-  }
+function photoTypeLabel(type) {
+  return type === "before" ? "Antes" : "Después";
 }
 
-async function openClientPhotoModal(clientId, type) {
+function renderClientPhotoGrid(message = "") {
+  const grid = document.getElementById("client-photo-grid");
+
+  document.querySelectorAll(".photo-tab").forEach(tab => {
+    tab.classList.toggle("active", tab.dataset.type === photoState.type);
+  });
+
+  if (message || !photoState.photos) {
+    grid.innerHTML = `<div class="photo-grid-message">${esc(message || "Cargando fotos...")}</div>`;
+    return;
+  }
+
+  const current = photoState.photos[photoState.type];
+
+  grid.innerHTML = PHOTO_SIDES.map(side => {
+    const image = current[side.key];
+    const busy = photoState.busySide === side.key;
+
+    return `
+      <div class="photo-slot">
+        <div class="photo-slot-label">${esc(side.label)}</div>
+        <button type="button" class="photo-slot-box ${image ? "has-photo" : ""}"
+                data-action="${image ? "view" : "upload"}" data-side="${side.key}">
+          ${image ? `<img src="${esc(image)}" alt="${esc(side.label)}" />` : "📷<br>Agregar foto"}
+          ${busy ? `<span class="photo-slot-busy">${esc(photoState.busyText)}</span>` : ""}
+        </button>
+        ${image ? `
+          <div class="photo-slot-actions">
+            <button type="button" class="btn btn-secondary btn-sm" data-action="upload" data-side="${side.key}">Cambiar</button>
+            <button type="button" class="btn btn-danger btn-sm" data-action="delete" data-side="${side.key}">Eliminar</button>
+          </div>` : ""}
+      </div>
+    `;
+  }).join("");
+}
+
+async function openClientPhotoModal(clientId, type = "before") {
   const client = findClient(clientId);
   if (!client) return;
 
-  currentPhoto = { clientId, type };
+  photoState = { clientId, type, photos: null, pendingSide: null, busySide: null };
 
-  document.getElementById("client-photo-title").textContent =
-    `${type === "before" ? "Foto ANTES" : "Foto DESPUÉS"} — ${client.name}`;
-  document.getElementById("client-photo-input").value = "";
-  showClientPhoto("", "Cargando...");
+  document.getElementById("client-photo-title").textContent = `Fotos — ${client.name}`;
+  renderClientPhotoGrid();
   showModal("client-photo-modal");
 
   try {
-    const image = await getClientPhoto(clientId, type);
-    // Por si el usuario cerró o abrió otra foto mientras cargaba
-    if (currentPhoto.clientId === clientId && currentPhoto.type === type) {
-      showClientPhoto(image);
-    }
+    const photos = await getClientPhotos(clientId);
+    // Por si el usuario cerró o abrió otro cliente mientras cargaba
+    if (photoState.clientId !== clientId) return;
+    photoState.photos = photos;
+    renderClientPhotoGrid();
   } catch (err) {
     console.error(err);
-    showClientPhoto("", "No se pudo cargar la foto.");
+    renderClientPhotoGrid("No se pudieron cargar las fotos.");
   }
 }
 
 function closeClientPhotoModal() {
   hideModal("client-photo-modal");
-  currentPhoto = { clientId: null, type: null };
+  photoState = { clientId: null, type: "before", photos: null, pendingSide: null, busySide: null };
+}
+
+function viewClientPhoto(side) {
+  const client = findClient(photoState.clientId);
+  const image = photoState.photos[photoState.type][side];
+  const sideInfo = PHOTO_SIDES.find(s => s.key === side);
+  if (!image) return;
+
+  document.getElementById("photo-modal-img").src = image;
+  document.getElementById("photo-modal-img").alt = sideInfo ? sideInfo.label : "";
+  document.getElementById("photo-modal-name").textContent =
+    `${photoTypeLabel(photoState.type)} · ${sideInfo ? sideInfo.label : ""}${client ? " — " + client.name : ""}`;
+  showModal("photo-modal");
+}
+
+async function uploadClientPhoto(file) {
+  const { clientId, type, pendingSide: side } = photoState;
+  if (!clientId || !side || !file) return;
+
+  photoState.busySide = side;
+  photoState.busyText = "Guardando...";
+  renderClientPhotoGrid();
+
+  try {
+    const dataUrl = await compressImage(file);
+    await saveClientPhoto(clientId, type, side, dataUrl);
+    if (photoState.clientId === clientId) photoState.photos[type][side] = dataUrl;
+    showToast("Foto guardada.");
+  } catch (err) {
+    console.error(err);
+    showToast(err.message || "No se pudo guardar la foto.", "error");
+  } finally {
+    if (photoState.clientId === clientId) {
+      photoState.busySide = null;
+      photoState.pendingSide = null;
+      renderClientPhotoGrid();
+    }
+  }
+}
+
+async function removeClientPhoto(side) {
+  const { clientId, type } = photoState;
+  const sideInfo = PHOTO_SIDES.find(s => s.key === side);
+  if (!clientId) return;
+  if (!confirm(`¿Eliminar la foto "${photoTypeLabel(type)} · ${sideInfo ? sideInfo.label : side}"?`)) return;
+
+  photoState.busySide = side;
+  photoState.busyText = "Eliminando...";
+  renderClientPhotoGrid();
+
+  try {
+    await deleteClientPhoto(clientId, type, side);
+    if (photoState.clientId === clientId) photoState.photos[type][side] = "";
+    showToast("Foto eliminada.");
+  } catch (err) {
+    console.error(err);
+    showToast("No se pudo eliminar la foto.", "error");
+  } finally {
+    if (photoState.clientId === clientId) {
+      photoState.busySide = null;
+      renderClientPhotoGrid();
+    }
+  }
 }
 
 function setupClientPhotos() {
+  const input = document.getElementById("client-photo-input");
+
   document.getElementById("client-photo-close").addEventListener("click", closeClientPhotoModal);
   document.getElementById("client-photo-modal").addEventListener("click", e => {
     if (e.target.id === "client-photo-modal") closeClientPhotoModal();
   });
 
-  // Vista previa al escoger archivo
-  document.getElementById("client-photo-input").addEventListener("change", e => {
-    const file = e.target.files[0];
-    if (file) showClientPhoto(URL.createObjectURL(file));
+  // Pestañas Antes / Después
+  document.querySelectorAll(".photo-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      photoState.type = tab.dataset.type;
+      renderClientPhotoGrid();
+    });
   });
 
-  document.getElementById("client-photo-save").addEventListener("click", async e => {
-    const file = document.getElementById("client-photo-input").files[0];
-    if (!file) {
-      showToast("Selecciona una foto primero.", "error");
-      return;
+  // Acciones de cada recuadro
+  document.getElementById("client-photo-grid").addEventListener("click", e => {
+    const btn = e.target.closest("[data-action]");
+    if (!btn || !photoState.photos || photoState.busySide) return;
+
+    const side = btn.dataset.side;
+
+    if (btn.dataset.action === "view") viewClientPhoto(side);
+
+    if (btn.dataset.action === "upload") {
+      photoState.pendingSide = side;
+      input.value = "";
+      input.click();
     }
 
-    const { clientId, type } = currentPhoto;
-    const button = e.currentTarget;
-    setBusy(button, true, "Subiendo...");
-
-    try {
-      const dataUrl = await compressImage(file);
-      await saveClientPhoto(clientId, type, dataUrl);
-      closeClientPhotoModal();
-      showToast("Foto guardada.");
-    } catch (err) {
-      console.error(err);
-      showToast(err.message || "No se pudo guardar la foto.", "error");
-    } finally {
-      setBusy(button, false);
-    }
+    if (btn.dataset.action === "delete") removeClientPhoto(side);
   });
 
-  document.getElementById("client-photo-delete").addEventListener("click", async e => {
-    const { clientId, type } = currentPhoto;
-    if (!clientId) return;
-    if (!confirm("¿Eliminar esta foto?")) return;
-
-    const button = e.currentTarget;
-    setBusy(button, true, "Eliminando...");
-
-    try {
-      await deleteClientPhoto(clientId, type);
-      closeClientPhotoModal();
-      showToast("Foto eliminada.");
-    } catch (err) {
-      console.error(err);
-      showToast("No se pudo eliminar la foto.", "error");
-    } finally {
-      setBusy(button, false);
-    }
+  // Cuando se escoge o se toma la foto, se guarda de inmediato
+  input.addEventListener("change", () => {
+    const file = input.files[0];
+    if (file) uploadClientPhoto(file);
   });
 }
 
