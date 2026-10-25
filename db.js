@@ -182,10 +182,17 @@ async function saveClient(client) {
 
 async function deleteClient(id) {
   await deleteDocById(COL.clients, id);
-  await Promise.all([
-    userCol(COL.photos).doc(photoDocId(id, "before")).delete(),
-    userCol(COL.photos).doc(photoDocId(id, "after")).delete()
-  ]);
+
+  // Borra sus 8 fotos (4 antes + 4 después) y las de la versión anterior
+  const deletes = [];
+  PHOTO_TYPES.forEach(type => {
+    PHOTO_SIDES.forEach(side => {
+      deletes.push(userCol(COL.photos).doc(photoDocId(id, type, side.key)).delete());
+    });
+    deletes.push(userCol(COL.photos).doc(legacyPhotoDocId(id, type)).delete());
+  });
+  await Promise.all(deletes);
+
   await loadClients();
 }
 
@@ -240,12 +247,27 @@ async function saveWorkHours(startTime, endTime) {
 }
 
 // ============================
-// FOTOS ANTES / DESPUÉS
-// Cada foto va en su propio documento (clientPhotos/{clienteId}_{tipo})
-// para no pasar el límite de 1 MB por documento y para que
-// la lista de clientes cargue rápido.
+// FOTOS ANTES / DESPUÉS (4 lados cada una)
+// Cada foto va en su propio documento:
+//   clientPhotos/{clienteId}_{before|after}_{front|back|left|right}
+// Así ninguna pasa el límite de 1 MB por documento y la
+// lista de clientes sigue cargando rápido.
 // ============================
-function photoDocId(clientId, type) {
+const PHOTO_TYPES = ["before", "after"];
+
+const PHOTO_SIDES = [
+  { key: "front", label: "Frente" },
+  { key: "back",  label: "Atrás" },
+  { key: "left",  label: "Lado izquierdo" },
+  { key: "right", label: "Lado derecho" }
+];
+
+function photoDocId(clientId, type, side) {
+  return `${clientId}_${type}_${side}`;
+}
+
+// Formato de la versión anterior (una sola foto por tipo)
+function legacyPhotoDocId(clientId, type) {
   return `${clientId}_${type}`;
 }
 
@@ -253,31 +275,62 @@ function legacyPhotoField(type) {
   return type === "before" ? "photoBefore" : "photoAfter";
 }
 
-async function getClientPhoto(clientId, type) {
-  const snap = await userCol(COL.photos).doc(photoDocId(clientId, type)).get();
-  if (snap.exists && snap.data().image) return snap.data().image;
+// Devuelve { before: { front, back, left, right }, after: { ... } }
+// con la imagen de cada lado, o "" si no tiene
+async function getClientPhotos(clientId) {
+  const result = { before: {}, after: {} };
+  const legacy = { before: "", after: "" };
+  const reads = [];
 
-  // Fotos guardadas con la versión anterior (dentro del cliente)
+  PHOTO_TYPES.forEach(type => {
+    PHOTO_SIDES.forEach(side => {
+      reads.push(
+        userCol(COL.photos).doc(photoDocId(clientId, type, side.key)).get().then(snap => {
+          result[type][side.key] = snap.exists ? (snap.data().image || "") : "";
+        })
+      );
+    });
+
+    reads.push(
+      userCol(COL.photos).doc(legacyPhotoDocId(clientId, type)).get().then(snap => {
+        legacy[type] = snap.exists ? (snap.data().image || "") : "";
+      })
+    );
+  });
+
+  await Promise.all(reads);
+
+  // Las fotos de versiones anteriores se muestran como "Frente"
   const client = clients.find(c => String(c.id) === String(clientId));
-  return (client && client[legacyPhotoField(type)]) || "";
+  PHOTO_TYPES.forEach(type => {
+    if (!result[type].front) {
+      result[type].front = legacy[type] || (client && client[legacyPhotoField(type)]) || "";
+    }
+  });
+
+  return result;
 }
 
-async function saveClientPhoto(clientId, type, dataUrl) {
-  await userCol(COL.photos).doc(photoDocId(clientId, type)).set({
+async function saveClientPhoto(clientId, type, side, dataUrl) {
+  await userCol(COL.photos).doc(photoDocId(clientId, type, side)).set({
     clientId: String(clientId),
     type,
+    side,
     image: dataUrl,
     updatedAt: serverTimestamp()
   });
-  await removeLegacyPhoto(clientId, type);
+  if (side === "front") await removeLegacyPhoto(clientId, type);
 }
 
-async function deleteClientPhoto(clientId, type) {
-  await userCol(COL.photos).doc(photoDocId(clientId, type)).delete();
-  await removeLegacyPhoto(clientId, type);
+async function deleteClientPhoto(clientId, type, side) {
+  await userCol(COL.photos).doc(photoDocId(clientId, type, side)).delete();
+  if (side === "front") await removeLegacyPhoto(clientId, type);
 }
 
+// Quita la foto vieja para que no vuelva a aparecer como "Frente"
 async function removeLegacyPhoto(clientId, type) {
+  await userCol(COL.photos).doc(legacyPhotoDocId(clientId, type)).delete();
+
   const field = legacyPhotoField(type);
   const client = clients.find(c => String(c.id) === String(clientId));
   if (client && client[field] !== undefined) {
@@ -401,4 +454,22 @@ async function seedDefaultServicesOnce() {
   batch.set(flagRef, { servicesSeeded: true }, { merge: true });
   await batch.commit();
   return true;
+}
+
+// Agrega solo los servicios predeterminados que todavía no existen
+// (compara por nombre). Los que ya tienes no se tocan, así que
+// tus precios cambiados se respetan. Devuelve cuántos agregó.
+async function addMissingDefaultServices() {
+  const existing = new Set(services.map(s => String(s.name || "").trim().toLowerCase()));
+  const missing = DEFAULT_SERVICES.filter(s => !existing.has(s.name.toLowerCase()));
+  if (!missing.length) return 0;
+
+  const batch = db.batch();
+  missing.forEach(service => {
+    const ref = userCol(COL.services).doc();
+    batch.set(ref, { ...service, createdAt: serverTimestamp() });
+  });
+  await batch.commit();
+  await loadServices();
+  return missing.length;
 }
